@@ -1,15 +1,18 @@
 # Thirdparty imports
-from django.urls import path
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 # Projects imports
-from .views import ShopUserViewSet
+from .views import ShopUserViewSet, me
 
 router = DefaultRouter()
 router.register(
     r'users',
     ShopUserViewSet,
-    basename='users_create_v1'
+    basename='users_v1'
 )
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('users/me', me, name='users_me'),
+    path('', include(router.urls)),
+]
