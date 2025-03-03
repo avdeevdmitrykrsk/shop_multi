@@ -59,7 +59,7 @@ class PropertyValueSerializer(BaseRatingFavoriteShoppingCartSerializer):
 
 class GetProductPropertySerializer(serializers.ModelSerializer):
 
-    id = serializers.CharField(source='property_id')
+    id = serializers.IntegerField(source='property_id')
 
     class Meta:
         model = ProductProperty
@@ -76,9 +76,14 @@ class GetProductSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_rating(self, instance):
-        return Rating.objects.filter(product_id=instance.id).aggregate(
+        rating = Rating.objects.filter(product_id=instance.id).aggregate(
             rating=Avg('score')
-        )
+        )['rating']
+
+        if not rating:
+            rating = instance.rating
+
+        return rating
 
     def get_properties(self, instance):
         product_properties = instance.product_property_prod.all()
