@@ -24,12 +24,14 @@ AUTH_USER_MODEL = 'users.ShopUser'
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%8g+ff)jjtck@ilc!xkxp=(c1ceb)0+8(w2a8a&a2awh2z@$71'
+SECRET_KEY = (
+    'django-insecure-%8g+ff)jjtck@ilc!xkxp=(c1ceb)0+8(w2a8a&a2awh2z@$71'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -41,27 +43,23 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     # DRF
     'rest_framework',
     'rest_framework_simplejwt',
     'django_filters',
-
     # JWT-control
     'djoser',
-
     # Toolbar
     'debug_toolbar',
-
     # local apps
-    'products.apps.ProductsConfig',
     'users.apps.UsersConfig',
+    'products.apps.ProductsConfig',
 ]
 
 DJOSER = {
-    'SERIALIZERS': {
-        'user_create': 'users.serializers.ShopUserCreateSerializer',
-    },
+    # 'SERIALIZERS': {
+    #     'user_create': 'users.serializers.ShopUserCreateSerializer',
+    # },
 }
 
 SIMPLE_JWT = {
@@ -70,13 +68,13 @@ SIMPLE_JWT = {
 
 AUTHENTICATION_BACKENDS = (
     'users.authentication.ShopUserAuthenticationBackend',
-    # 'django.contrib.auth.backends.ModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
 )
 
 REST_FRAMEWORK = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'users.permissions.AllBlock',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
