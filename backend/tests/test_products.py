@@ -6,6 +6,7 @@ from pprint import pprint
 # Thirdparty imports
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from dotmap import DotMap
 from rest_framework.test import APITestCase
 
 # Projects imports
@@ -53,40 +54,98 @@ class PreData:
 
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
-    def access_by_different_users(self, url, data):
+    def check_access_by_different_users(self, url, choose_method=None):
         """Проверка доступности эндпоинта для юзеров с разными правами."""
 
-        #  Anonymous User.
-        response = self.client.post(
-            self.url_products_create, data=data, format='json'
+        http_methods = DotMap(
+            post=self.client.post,
+            patch=self.client.patch,
+            delete=self.client.delete,
         )
+
+        if (
+            not choose_method
+            or not isinstance(choose_method, str)
+            or choose_method not in http_methods
+        ):
+            raise TypeError(
+                'Параметр "choose_method" указан неверно, либо не указан.'
+                ' Укажите метод "post/patch/delete".'
+            )
+        http_method = http_methods[choose_method]
+
+        data_to_send = {
+            "name": "test_produc1",
+            "description": "test_description",
+            "price": 1,
+            "properties": [
+                {"id": 1, "value": 3000},
+                {"id": 2, "value": 50000},
+            ],
+        }
+
+        pre_data = {
+            '/api/v1/products/': {
+                'post': {
+                    'anonymous': {
+                        'status': HTTPStatus.OK,
+                        'message': ANONYMOUS_CANT_CREATE_PRODUCT,
+                    },
+                    'authenticated': {
+                        'status': HTTPStatus.OK,
+                        'message': USER_CANT_CREATE_PRODUCT,
+                    },
+                    'superuser': {
+                        'status': HTTPStatus.CREATED,
+                        'message': SUPERUSER_CAN_CREATE_PRODUCT,
+                    },
+                }
+            },
+            '/api/v1/products/1/': {
+                'patch': {
+                    'anonymous': {
+                        'status': HTTPStatus.OK,
+                        'message': ANONYMOUS_CANT_EDIT_PRODUCT,
+                    },
+                    'authenticated': {
+                        'status': HTTPStatus.OK,
+                        'message': USER_CANT_EDIT_PRODUCT,
+                    },
+                    'superuser': {
+                        'status': HTTPStatus.OK,
+                        'message': SUPERUSER_CAN_EDIT_PRODUCT,
+                    },
+                }
+            },
+        }
+        assertion_data = DotMap(pre_data)
+
+        #  Anonymous User.
+        response = http_method(url, data=data_to_send, format='json')
         self.assertNotEqual(
             response.status_code,
-            HTTPStatus.OK,
-            ANONYMOUS_CANT_CREATE_PRODUCT,
+            assertion_data[url][choose_method].anonymous.status,
+            assertion_data[url][choose_method].anonymous.message,
         )
 
         #  Authenticated User.
         self._login()
-        response = self.client.post(
-            self.url_products_create, data=data, format='json'
-        )
+        response = http_method(url, data=data_to_send, format='json')
         self.assertNotEqual(
             response.status_code,
-            HTTPStatus.OK,
-            USER_CANT_CREATE_PRODUCT,
+            assertion_data[url][choose_method].authenticated.status,
+            assertion_data[url][choose_method].authenticated.message,
         )
 
         #  Superuser - создание Product.
         self._login(superuser=True)
-        response = self.client.post(
-            self.url_products_create, data=data, format='json'
-        )
+        response = http_method(url, data=data_to_send, format='json')
         self.assertEqual(
             response.status_code,
-            HTTPStatus.CREATED,
-            SUPERUSER_CAN_CREATE_PRODUCT,
+            assertion_data[url][choose_method].superuser.status,
+            assertion_data[url][choose_method].superuser.message,
         )
+        return response
 
 
 class ProductTestCase(PreData, APITestCase):
@@ -192,8 +251,8 @@ class ProductTestCase(PreData, APITestCase):
             'updated_at': str,
         }
 
-        response = self.access_by_different_users(
-            self.url_products_create, data
+        response = self.check_access_by_different_users(
+            self.url_products_create, choose_method='post'
         )
 
         #  Проверка на количесто объектов в БД после создания.
@@ -213,7 +272,8 @@ class ProductTestCase(PreData, APITestCase):
         self.assertEqual(response.data['price'], data['price'])
 
     def test_03_edit_product(self):
-        self._login(superuser=True)
+        """Тест изменения продукта."""
+
         edited_data = {
             "name": "test_produc1",
             "description": "test_description",
@@ -223,6 +283,10 @@ class ProductTestCase(PreData, APITestCase):
                 {"id": 2, "value": 50000},
             ],
         }
+
+        response = self.check_access_by_different_users(
+            self.url_products_edit, choose_method='patch'
+        )
 
         response = self.client.patch(
             self.url_products_edit, edited_data, format='json'
