@@ -1,4 +1,5 @@
-from rest_framework.permissions import BasePermission
+# Thirdparty imports
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class AllBlock(BasePermission):
@@ -10,9 +11,11 @@ class AllBlock(BasePermission):
         return False
 
 
-class IsSuperuser(BasePermission):
+class IsSuperuserOrReadOnly(BasePermission):
 
     def has_permission(self, request, view):
         return bool(
-            request.user.is_authenticated and request.user.is_superuser
+            request.user.is_authenticated
+            and request.user.is_superuser
+            or request.method in SAFE_METHODS
         )
