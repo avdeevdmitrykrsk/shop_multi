@@ -10,9 +10,19 @@ from rest_framework.test import APITestCase
 
 # Projects imports
 from products.models import Product, ProductProperty, Property
-from tests.assert_messages.product import (
-    ANONYMOUS_CANT_CREATE_EDIT_DELETE_PRODUCT,
-    SUPERUSER_CAN_CREATE_EDIT_DELETE_PRODUCT,
+from tests.constants.product import (
+    ANONYMOUS_CANT_CREATE_PRODUCT,
+    ANONYMOUS_CANT_DELETE_PRODUCT,
+    ANONYMOUS_CANT_EDIT_PRODUCT,
+    EXPECTED_PRODUCTS_COUNT,
+    NOT_ENOUGH_FIELDS,
+    SUPERUSER_CAN_CREATE_PRODUCT,
+    SUPERUSER_CAN_DELETE_PRODUCT,
+    SUPERUSER_CAN_EDIT_PRODUCT,
+    URL_PRODUCTS,
+    USER_CANT_CREATE_PRODUCT,
+    USER_CANT_DELETE_PRODUCT,
+    USER_CANT_EDIT_PRODUCT,
 )
 from tests.factories import ProductFactory, SuperUserFactory, UserFactory
 
@@ -43,26 +53,42 @@ class PreData:
 
 
 class ProductTestCase(PreData, APITestCase):
+    """Класс для тестирования Product"""
 
     def setUp(self):
         super().setUp()
 
         self.product = ProductFactory()
-        self.url_products = '/api/v1/products/'
-        self.url_products_create = reverse('products_v1-list')
-        self.url_products_edit = reverse(
-            'products_v1-detail', args=[self.product.id]
-        )
-        self.url_products_delete = reverse(
-            'products_v1-detail', args=[self.product.id]
-        )
+
+        self.url_products = URL_PRODUCTS
+        self.url_products_create = URL_PRODUCTS
+        self.url_products_edit = f'{URL_PRODUCTS}{self.product.id}'
+        self.url_products_delete = f'{URL_PRODUCTS}{self.product.id}'
 
     def check_fields(self, data, required_fields, path=''):
+        """
+        Рекурсивная функция "unittest" для проверки наличия необходимых полей
+        в ответе API с локального сервера. Работает с
+        dict/list/tuple последовательностями, а так же вложенными.
+
+            На вход принимает 3 аргумента:
+
+                1. Аргумент "data":
+                    json-словарь из "response.data".
+
+                2. Аргумент required_fields:
+                    последовательность ожидаемых в ответе полей.
+
+                3. Аргумент "path":
+                    указывает начальную глубину для прохода
+                    по последовательностям, по дефолту = ''.
+
+        """
         if isinstance(required_fields, dict):
             for field, expected_type in required_fields.items():
                 field_path = f'{path}.{field}' if path else field
                 self.assertIn(
-                    field, data, f'Поле "{field_path}" отсутствует в ответе.'
+                    field, data, NOT_ENOUGH_FIELDS.format(f'"{field}"')
                 )
                 self.check_fields(data[field], expected_type, field_path)
 
@@ -82,6 +108,7 @@ class ProductTestCase(PreData, APITestCase):
             )
 
     def test_endpoint_exists(self):
+        """Тест на существование эндпоинта для Products"""
         self._login(superuser=True)
         response = self.client.get(self.url_products)
         self.assertEqual(
@@ -91,6 +118,8 @@ class ProductTestCase(PreData, APITestCase):
         )
 
     def test_create_product(self):
+        """Тест создания продукта."""
+
         data = {
             "name": "test_produc1",
             "description": "test_description",
@@ -126,22 +155,51 @@ class ProductTestCase(PreData, APITestCase):
             'updated_at': str,
         }
 
+        #  Проверка доступности эндпоинта для юзеров с разными правами.
+        #  Anonymous User.
         response = self.client.post(
             self.url_products_create, data=data, format='json'
         )
-        self.assertEqual(response.status_code, HTTPStatus.UNAUTHORIZED)
+        self.assertNotEqual(
+            response.status_code,
+            HTTPStatus.OK,
+            ANONYMOUS_CANT_CREATE_PRODUCT,
+        )
 
+        #  Authenticated User.
         self._login()
         response = self.client.post(
             self.url_products_create, data=data, format='json'
         )
-        self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)
+        self.assertNotEqual(
+            response.status_code,
+            HTTPStatus.OK,
+            USER_CANT_CREATE_PRODUCT,
+        )
 
+        #  Superuser - создание Product.
         self._login(superuser=True)
         response = self.client.post(
             self.url_products_create, data=data, format='json'
         )
-        self.assertEqual(response.status_code, HTTPStatus.CREATED)
-        pprint(response.data['article'])
+        self.assertEqual(
+            response.status_code,
+            HTTPStatus.CREATED,
+            SUPERUSER_CAN_CREATE_PRODUCT,
+        )
+
+        #  Проверка на количесто объектов в БД после создания.
+        products_count = Product.objects.count()
+        self.assertEqual(
+            products_count,
+            EXPECTED_PRODUCTS_COUNT,
+            'Убедитесь что Product был создан.',
+        )
+
         #  Проверка наличия необходимых ключей в ответе.
         self.check_fields(response.data, REQUIRED_FIELDS)
+
+        #  Проверка что созданные данные являются исходными.
+        self.assertEqual(response.data['name'], data['name'])
+        self.assertEqual(response.data['description'], data['description'])
+        self.assertEqual(response.data['price'], data['price'])

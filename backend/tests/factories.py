@@ -40,7 +40,7 @@ class PropertyFactory(factory.django.DjangoModelFactory):
 class ProductFactory(factory.django.DjangoModelFactory):
 
     name = factory.Faker('word')
-    description = ("test_description_edited",)
+    description = ('test_description_edited',)
     price = factory.Faker('random_int', min=1, max=1000)
     properties = factory.RelatedFactoryList(PropertyFactory, size=2)
     creator = factory.SubFactory(SuperUserFactory)
