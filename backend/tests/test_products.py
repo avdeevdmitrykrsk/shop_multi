@@ -14,6 +14,7 @@ from tests.constants.product import (
     ANONYMOUS_CANT_CREATE_PRODUCT,
     ANONYMOUS_CANT_DELETE_PRODUCT,
     ANONYMOUS_CANT_EDIT_PRODUCT,
+    ENDPOINT_EXIST,
     EXPECTED_PRODUCTS_COUNT,
     NOT_ENOUGH_FIELDS,
     SUPERUSER_CAN_CREATE_PRODUCT,
@@ -36,6 +37,7 @@ class PreData:
         self.superuser = SuperUserFactory()
 
     def _login(self, superuser=None):
+        """Аутентификация по токену."""
         token_url = reverse('jwt-create')
 
         email = self.user.email
@@ -51,6 +53,41 @@ class PreData:
 
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
+    def access_by_different_users(self, url, data):
+        """Проверка доступности эндпоинта для юзеров с разными правами."""
+
+        #  Anonymous User.
+        response = self.client.post(
+            self.url_products_create, data=data, format='json'
+        )
+        self.assertNotEqual(
+            response.status_code,
+            HTTPStatus.OK,
+            ANONYMOUS_CANT_CREATE_PRODUCT,
+        )
+
+        #  Authenticated User.
+        self._login()
+        response = self.client.post(
+            self.url_products_create, data=data, format='json'
+        )
+        self.assertNotEqual(
+            response.status_code,
+            HTTPStatus.OK,
+            USER_CANT_CREATE_PRODUCT,
+        )
+
+        #  Superuser - создание Product.
+        self._login(superuser=True)
+        response = self.client.post(
+            self.url_products_create, data=data, format='json'
+        )
+        self.assertEqual(
+            response.status_code,
+            HTTPStatus.CREATED,
+            SUPERUSER_CAN_CREATE_PRODUCT,
+        )
+
 
 class ProductTestCase(PreData, APITestCase):
     """Класс для тестирования Product"""
@@ -62,8 +99,8 @@ class ProductTestCase(PreData, APITestCase):
 
         self.url_products = URL_PRODUCTS
         self.url_products_create = URL_PRODUCTS
-        self.url_products_edit = f'{URL_PRODUCTS}{self.product.id}'
-        self.url_products_delete = f'{URL_PRODUCTS}{self.product.id}'
+        self.url_products_edit = f'{URL_PRODUCTS}{self.product.id}/'
+        self.url_products_delete = f'{URL_PRODUCTS}{self.product.id}/'
 
     def check_fields(self, data, required_fields, path=''):
         """
@@ -107,17 +144,17 @@ class ProductTestCase(PreData, APITestCase):
                 ),
             )
 
-    def test_endpoint_exists(self):
+    def test_01_endpoint_exists(self):
         """Тест на существование эндпоинта для Products"""
         self._login(superuser=True)
         response = self.client.get(self.url_products)
         self.assertEqual(
             response.status_code,
             HTTPStatus.OK,
-            f'Проверьте что определен эндпоинт {self.url_products}',
+            ENDPOINT_EXIST.format(self.url_products),
         )
 
-    def test_create_product(self):
+    def test_02_create_product(self):
         """Тест создания продукта."""
 
         data = {
@@ -155,37 +192,8 @@ class ProductTestCase(PreData, APITestCase):
             'updated_at': str,
         }
 
-        #  Проверка доступности эндпоинта для юзеров с разными правами.
-        #  Anonymous User.
-        response = self.client.post(
-            self.url_products_create, data=data, format='json'
-        )
-        self.assertNotEqual(
-            response.status_code,
-            HTTPStatus.OK,
-            ANONYMOUS_CANT_CREATE_PRODUCT,
-        )
-
-        #  Authenticated User.
-        self._login()
-        response = self.client.post(
-            self.url_products_create, data=data, format='json'
-        )
-        self.assertNotEqual(
-            response.status_code,
-            HTTPStatus.OK,
-            USER_CANT_CREATE_PRODUCT,
-        )
-
-        #  Superuser - создание Product.
-        self._login(superuser=True)
-        response = self.client.post(
-            self.url_products_create, data=data, format='json'
-        )
-        self.assertEqual(
-            response.status_code,
-            HTTPStatus.CREATED,
-            SUPERUSER_CAN_CREATE_PRODUCT,
+        response = self.access_by_different_users(
+            self.url_products_create, data
         )
 
         #  Проверка на количесто объектов в БД после создания.
@@ -203,3 +211,27 @@ class ProductTestCase(PreData, APITestCase):
         self.assertEqual(response.data['name'], data['name'])
         self.assertEqual(response.data['description'], data['description'])
         self.assertEqual(response.data['price'], data['price'])
+
+    def test_03_edit_product(self):
+        self._login(superuser=True)
+        edited_data = {
+            "name": "test_produc1",
+            "description": "test_description",
+            "price": 1,
+            "properties": [
+                {"id": 1, "value": 3000},
+                {"id": 2, "value": 50000},
+            ],
+        }
+
+        response = self.client.patch(
+            self.url_products_edit, edited_data, format='json'
+        )
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        #  Проверка что новые данные изменились.
+        self.assertEqual(response.data['name'], edited_data['name'])
+        self.assertEqual(
+            response.data['description'], edited_data['description']
+        )
+        self.assertEqual(response.data['price'], edited_data['price'])

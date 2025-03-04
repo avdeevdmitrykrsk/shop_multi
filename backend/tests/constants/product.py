@@ -32,6 +32,7 @@ SUPERUSER_CAN_DELETE_PRODUCT = (
 
 #  Product URLs
 URL_PRODUCTS = '/api/v1/products/'
+ENDPOINT_EXIST = 'Проверьте что определен эндпоинт {}.'
 
 #  Product data
 NOT_ENOUGH_FIELDS = (

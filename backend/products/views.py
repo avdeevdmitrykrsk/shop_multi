@@ -20,7 +20,7 @@ from products.serializers import (
     RatingSerializer,
     ShoppingCartSerializer,
 )
-from users.permissions import IsSuperuser
+from users.permissions import IsSuperuserOrReadOnly
 
 SAFE_ACTIONS = ('list', 'retrieve')
 
@@ -76,9 +76,9 @@ class RatingViewSet(ModelViewSet):
 
 class ProductViewSet(ModelViewSet):
 
-    http_method_names = ('get', 'post', 'patch')
+    http_method_names = ('get', 'post', 'patch', 'delete')
     queryset = Product.objects.all()
-    permission_classes = (IsAuthenticatedOrReadOnly, IsSuperuser)
+    permission_classes = (IsAuthenticatedOrReadOnly, IsSuperuserOrReadOnly)
 
     def get_serializer_class(self):
         if self.action in SAFE_ACTIONS:
