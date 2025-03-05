@@ -188,7 +188,7 @@ class ProductTestCase(PreData, APITestCase):
                 )
                 self.check_fields(data[field], expected_type, field_path)
 
-        elif isinstance(required_fields, (list or tuple)):
+        elif isinstance(required_fields, (list, tuple)):
             for index, item in enumerate(data):
                 item_path = f'{path}[{index}]'
                 self.check_fields(item, required_fields[0], item_path)
@@ -234,6 +234,7 @@ class ProductTestCase(PreData, APITestCase):
             'properties': [
                 {
                     'id': int,
+                    'name': str,
                     'value': str,
                 }
             ],

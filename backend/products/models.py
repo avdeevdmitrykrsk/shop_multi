@@ -73,8 +73,17 @@ class Product(models.Model):
     article = models.PositiveBigIntegerField(
         verbose_name='Артикул', blank=False, null=False, unique=True
     )
-    rating = models.PositiveSmallIntegerField(
-        verbose_name='Рейтинг', blank=False, null=False, default=DEFAULT_RATING
+    is_in_favorite = models.BooleanField(
+        verbose_name='В избранном',
+        null=False,
+        blank=False,
+        default=False,
+    )
+    is_in_shopping_cart = models.BooleanField(
+        verbose_name='В корзине',
+        null=False,
+        blank=False,
+        default=False,
     )
     created_at = models.DateTimeField(
         verbose_name='Дата создания', blank=False, auto_now_add=True
@@ -132,7 +141,7 @@ class ProductProperty(models.Model):
         return f'{self.product.name}: {self.property.name} - {self.value}'
 
 
-class RatingFavoriteSgoppingCart(models.Model):
+class RatingFavoriteShoppingCart(models.Model):
     """Абстрактная модель для Rating/Favorite/ShoppingCart"""
 
     user = models.ForeignKey(
@@ -154,13 +163,13 @@ class RatingFavoriteSgoppingCart(models.Model):
         return f'{self.user} has a {self.recipe[:LONG_STR_CUT_VALUE]}.'
 
 
-class Rating(RatingFavoriteSgoppingCart):
+class Rating(RatingFavoriteShoppingCart):
 
     score = models.PositiveSmallIntegerField(
         verbose_name='Счет', blank=False, null=False
     )
 
-    class Meta(RatingFavoriteSgoppingCart.Meta):
+    class Meta(RatingFavoriteShoppingCart.Meta):
         default_related_name = 'rating_list'
         verbose_name = 'Рейтинг'
         verbose_name_plural = 'Рейтинги'
@@ -172,9 +181,9 @@ class Rating(RatingFavoriteSgoppingCart):
         ]
 
 
-class Favorite(RatingFavoriteSgoppingCart):
+class Favorite(RatingFavoriteShoppingCart):
 
-    class Meta(RatingFavoriteSgoppingCart.Meta):
+    class Meta(RatingFavoriteShoppingCart.Meta):
         default_related_name = 'favorite_list'
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранные'
@@ -186,9 +195,9 @@ class Favorite(RatingFavoriteSgoppingCart):
         ]
 
 
-class ShoppingCart(RatingFavoriteSgoppingCart):
+class ShoppingCart(RatingFavoriteShoppingCart):
 
-    class Meta(RatingFavoriteSgoppingCart.Meta):
+    class Meta(RatingFavoriteShoppingCart.Meta):
         default_related_name = 'shopping_cart_list'
         verbose_name = 'Добавлен в корзину'
         verbose_name_plural = 'Добавлены в корзину'
