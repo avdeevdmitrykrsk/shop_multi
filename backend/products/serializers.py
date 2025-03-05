@@ -5,7 +5,7 @@ from django.db.models import Avg, F
 from rest_framework import serializers
 
 # Projects imports
-from .constants import MIN_PRODUCT_PRICE, PRICE_ERR_MSG
+from .constants import DEFAULT_RATING, MIN_PRODUCT_PRICE, PRICE_ERR_MSG
 from products.models import (
     Favorite,
     Product,
@@ -28,13 +28,14 @@ class BaseRatingFavoriteShoppingCartSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        fields = '__all__'
+        fields = ('user', 'product')
 
 
 class RatingSerializer(BaseRatingFavoriteShoppingCartSerializer):
 
     class Meta(BaseRatingFavoriteShoppingCartSerializer.Meta):
         model = Rating
+        fields = ('user', 'product', 'score')
 
 
 class FavoriteSerializer(BaseRatingFavoriteShoppingCartSerializer):
@@ -42,11 +43,23 @@ class FavoriteSerializer(BaseRatingFavoriteShoppingCartSerializer):
     class Meta(BaseRatingFavoriteShoppingCartSerializer.Meta):
         model = Favorite
 
+    def create(self, validated_data):
+        instance = validated_data.get('product')
+        setattr(instance, 'is_in_favorite', True)
+        instance.save()
+        return super().create(validated_data)
+
 
 class ShoppingCartSerializer(BaseRatingFavoriteShoppingCartSerializer):
 
     class Meta(BaseRatingFavoriteShoppingCartSerializer.Meta):
         model = ShoppingCart
+
+    def create(self, validated_data):
+        instance = validated_data.get('product')
+        setattr(instance, 'is_in_shopping_cart', True)
+        instance.save()
+        return super().create(validated_data)
 
 
 class PropertyValueSerializer(BaseRatingFavoriteShoppingCartSerializer):
@@ -60,10 +73,14 @@ class PropertyValueSerializer(BaseRatingFavoriteShoppingCartSerializer):
 class GetProductPropertySerializer(serializers.ModelSerializer):
 
     id = serializers.IntegerField(source='property_id')
+    name = serializers.SerializerMethodField(method_name='get_name')
 
     class Meta:
         model = ProductProperty
-        fields = ('id', 'value')
+        fields = ('id', 'name', 'value')
+
+    def get_name(self, obj):
+        return Property.objects.get(id=obj.property.id).name
 
 
 class GetProductSerializer(serializers.ModelSerializer):
@@ -81,7 +98,7 @@ class GetProductSerializer(serializers.ModelSerializer):
         )['rating']
 
         if not rating:
-            rating = instance.rating
+            rating = DEFAULT_RATING
 
         return rating
 

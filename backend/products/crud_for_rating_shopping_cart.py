@@ -6,14 +6,19 @@ from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 
 # Projects imports
-from .models import Product, Rating
-from .serializers import GetProductSerializer, RatingSerializer
+from products.exceptions import ProductAlreadyExist
+from products.models import Product, Rating
+from products.serializers import GetProductSerializer, RatingSerializer
 
 
 def create_rating_favorite_shopping_cart(
     request, serializer_class, pk, extra_data=None
 ):
     instance = get_object_or_404(Product, id=pk)
+
+    # user = request.user
+    # if Rating.objects.filter(user=user, product=instance).exists():
+    #     raise ProductAlreadyRated()
 
     data = {'user': request.user.id, 'product': instance.id}
     if extra_data:
