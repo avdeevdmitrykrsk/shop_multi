@@ -4,6 +4,8 @@ from dataclasses import dataclass
 # Thirdparty imports
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import (
     authentication_classes,
     permission_classes,
@@ -42,11 +44,6 @@ SAFE_ACTIONS = ('list', 'retrieve')
 @permission_classes((IsAuthenticatedOrReadOnly,))
 class RatingFavoriteShoppingCartViewSet(ModelViewSet):
 
-    # ERR_MESSAGES = {
-    #     'rating': RATING_ALREADY_EXIST,
-    #     'favorite': FAVORITE_ALREADY_EXIST,
-    #     'shopping_cart': SHOPPING_CART_ALREADY_EXIST,
-    # }
     SERIALIZER_MAPPING = {
         'rating': RatingSerializer,
         'favorite': FavoriteSerializer,
@@ -69,10 +66,6 @@ class RatingFavoriteShoppingCartViewSet(ModelViewSet):
         path_segment = self.get_path_segment()
         return self.QUERYSET_MAPPING.get(path_segment)
 
-    # def get_err_message(self):
-    #     path_segment = self.request.path.strip('/').split('/')[-1]
-    #     return self.ERR_MESSAGES.get(path_segment)
-
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         extra_data = None
@@ -92,15 +85,16 @@ class RatingFavoriteShoppingCartViewSet(ModelViewSet):
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         return delete_rating_favorite_shopping_cart(
-            request, self.get_queryset(), pk=kwargs.get('pk'),
+            request,
+            self.get_queryset(),
+            pk=kwargs.get('pk'),
         )
 
 
+@permission_classes((IsAuthenticatedOrReadOnly, IsSuperuserOrReadOnly))
 class ProductViewSet(ModelViewSet):
 
     http_method_names = ('get', 'post', 'patch', 'delete')
-    queryset = Product.objects.all()
-    permission_classes = (IsAuthenticatedOrReadOnly, IsSuperuserOrReadOnly)
 
     def get_queryset(self):
         return Product.objects.get_annotated_queryset(self.request.user)
