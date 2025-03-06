@@ -33,6 +33,24 @@ class Property(models.Model):
         return self.name
 
 
+class ProductManager(models.Manager):
+
+    def get_annotated_queryset(self, user):
+        queryset = super().get_queryset()
+        return queryset.annotate(
+            is_favorited=models.Exists(
+                Favorite.objects.filter(
+                    user=user, product=models.OuterRef('pk')
+                )
+            ),
+            is_in_shopping_cart=models.Exists(
+                ShoppingCart.objects.filter(
+                    user=user, product=models.OuterRef('pk')
+                )
+            ),
+        ).order_by('name', 'creator')
+
+
 class Product(models.Model):
     """Модель Продукта"""
 
@@ -73,24 +91,14 @@ class Product(models.Model):
     article = models.PositiveBigIntegerField(
         verbose_name='Артикул', blank=False, null=False, unique=True
     )
-    is_in_favorite = models.BooleanField(
-        verbose_name='В избранном',
-        null=False,
-        blank=False,
-        default=False,
-    )
-    is_in_shopping_cart = models.BooleanField(
-        verbose_name='В корзине',
-        null=False,
-        blank=False,
-        default=False,
-    )
     created_at = models.DateTimeField(
         verbose_name='Дата создания', blank=False, auto_now_add=True
     )
     updated_at = models.DateTimeField(
         verbose_name='Дата обновления', blank=True, auto_now=True
     )
+
+    objects = ProductManager()
 
     class Meta:
         ordering = ('name',)
@@ -132,8 +140,7 @@ class ProductProperty(models.Model):
         verbose_name_plural = 'Характеристики продуктов'
         constraints = [
             models.UniqueConstraint(
-                fields=('product', 'property'),
-                name='unique_product_property'
+                fields=('product', 'property'), name='unique_product_property'
             )
         ]
 
@@ -175,8 +182,7 @@ class Rating(RatingFavoriteShoppingCart):
         verbose_name_plural = 'Рейтинги'
         constraints = [
             models.UniqueConstraint(
-                fields=('user', 'product'),
-                name='unique_rating_user_product'
+                fields=('user', 'product'), name='unique_rating_user_product'
             )
         ]
 
@@ -189,8 +195,7 @@ class Favorite(RatingFavoriteShoppingCart):
         verbose_name_plural = 'Избранные'
         constraints = [
             models.UniqueConstraint(
-                fields=('user', 'product'),
-                name='unique_favorite_user_product'
+                fields=('user', 'product'), name='unique_favorite_user_product'
             )
         ]
 
@@ -204,6 +209,6 @@ class ShoppingCart(RatingFavoriteShoppingCart):
         constraints = [
             models.UniqueConstraint(
                 fields=('user', 'product'),
-                name='unique_shopping_cart_user_product'
+                name='unique_shopping_cart_user_product',
             )
         ]

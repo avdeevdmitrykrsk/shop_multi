@@ -16,10 +16,6 @@ def create_rating_favorite_shopping_cart(
 ):
     instance = get_object_or_404(Product, id=pk)
 
-    # user = request.user
-    # if Rating.objects.filter(user=user, product=instance).exists():
-    #     raise ProductAlreadyRated()
-
     data = {'user': request.user.id, 'product': instance.id}
     if extra_data:
         data.update(extra_data)
@@ -27,6 +23,8 @@ def create_rating_favorite_shopping_cart(
     serializer = serializer_class(data=data)
     serializer.is_valid(raise_exception=True)
     serializer.save()
+
+    instance = Product.objects.get_annotated_queryset(request.user, id=pk)
 
     serializer = GetProductSerializer(instance)
     return Response(data=serializer.data, status=status.HTTP_201_CREATED)
