@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Avg, F
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 # Projects imports
 from .constants import DEFAULT_RATING, MIN_PRODUCT_PRICE, PRICE_ERR_MSG
@@ -36,30 +37,33 @@ class RatingSerializer(BaseRatingFavoriteShoppingCartSerializer):
     class Meta(BaseRatingFavoriteShoppingCartSerializer.Meta):
         model = Rating
         fields = ('user', 'product', 'score')
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Rating.objects.all(), fields=('user', 'product')
+            )
+        ]
 
 
 class FavoriteSerializer(BaseRatingFavoriteShoppingCartSerializer):
 
     class Meta(BaseRatingFavoriteShoppingCartSerializer.Meta):
         model = Favorite
-
-    def create(self, validated_data):
-        instance = validated_data.get('product')
-        setattr(instance, 'is_in_favorite', True)
-        instance.save()
-        return super().create(validated_data)
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Favorite.objects.all(), fields=('user', 'product')
+            )
+        ]
 
 
 class ShoppingCartSerializer(BaseRatingFavoriteShoppingCartSerializer):
 
     class Meta(BaseRatingFavoriteShoppingCartSerializer.Meta):
         model = ShoppingCart
-
-    def create(self, validated_data):
-        instance = validated_data.get('product')
-        setattr(instance, 'is_in_shopping_cart', True)
-        instance.save()
-        return super().create(validated_data)
+        validators = [
+            UniqueTogetherValidator(
+                queryset=ShoppingCart.objects.all(), fields=('user', 'product')
+            )
+        ]
 
 
 class PropertyValueSerializer(BaseRatingFavoriteShoppingCartSerializer):
@@ -85,8 +89,12 @@ class GetProductPropertySerializer(serializers.ModelSerializer):
 
 class GetProductSerializer(serializers.ModelSerializer):
     properties = serializers.SerializerMethodField()
-    creator = ShopUserRetrieveSerializer()
+    creator = ShopUserRetrieveSerializer(read_only=True)
     rating = serializers.SerializerMethodField(method_name='get_rating')
+    is_favorited = serializers.BooleanField(default=False, read_only=True)
+    is_in_shopping_cart = serializers.BooleanField(
+        default=False, read_only=True
+    )
 
     class Meta:
         model = Product

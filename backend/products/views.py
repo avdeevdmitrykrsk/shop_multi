@@ -15,15 +15,14 @@ from rest_framework.permissions import (
 )
 from rest_framework.viewsets import ModelViewSet
 
+# Projects imports
+from .crud_for_rating_shopping_cart import (  # delete_rating_favorite_shopping_cart,
+    create_rating_favorite_shopping_cart,
+)
 from products.constants import (
     FAVORITE_ALREADY_EXIST,
     RATING_ALREADY_EXIST,
     SHOPPING_CART_ALREADY_EXIST,
-)
-
-# Projects imports
-from .crud_for_rating_shopping_cart import (  # delete_rating_favorite_shopping_cart,
-    create_rating_favorite_shopping_cart,
 )
 from products.exceptions import ProductAlreadyExist
 from products.models import Favorite, Product, Rating, ShoppingCart
@@ -42,54 +41,36 @@ SAFE_ACTIONS = ('list', 'retrieve')
 @permission_classes((IsAuthenticatedOrReadOnly,))
 class RatingFavoriteShoppingCartViewSet(ModelViewSet):
 
-    def get_serializer_class(self):
-        path = self.request.path
+    ERR_MESSAGES = {
+        'rating': RATING_ALREADY_EXIST,
+        'favorite': FAVORITE_ALREADY_EXIST,
+        'shopping_cart': SHOPPING_CART_ALREADY_EXIST,
+    }
+    SERIALIZER_MAPPING = {
+        'rating': RatingSerializer,
+        'favorite': FavoriteSerializer,
+        'shopping_cart': ShoppingCartSerializer,
+    }
+    QUERYSET_MAPPING = {
+        'rating': Rating.objects.all(),
+        'favorite': Favorite.objects.all(),
+        'shopping_cart': ShoppingCart.objects.all(),
+    }
 
-        if 'rating' in path:
-            serializer = RatingSerializer
-        elif 'favorite' in path:
-            serializer = FavoriteSerializer
-        elif 'shopping_cart' in path:
-            serializer = ShoppingCartSerializer
-        return serializer
+    def get_serializer_class(self):
+        path_segment = self.request.path.strip('/').split('/')[-1]
+        return self.SERIALIZER_MAPPING.get(path_segment)
 
     def get_queryset(self):
-        path = self.request.path
+        path_segment = self.request.path.strip('/').split('/')[-1]
+        return self.QUERYSET_MAPPING.get(path_segment)
 
-        if 'rating' in path:
-            queryset = Rating.objects.all()
-        elif 'favorite' in path:
-            queryset = Favorite.objects.all()
-        elif 'shopping_cart' in path:
-            queryset = ShoppingCart.objects.all()
-        return queryset
-
-    def get_err_message(self, request):
-        err_messages = {
-            'rating': RATING_ALREADY_EXIST,
-            'favorite': FAVORITE_ALREADY_EXIST,
-            'shopping_cart': SHOPPING_CART_ALREADY_EXIST,
-        }
-        return err_messages[request.path.split('/')[-2]]
-
-    def _has_already_exist(self, request, *args, **kwargs):
-
-        if (
-            self.get_queryset()
-            .filter(
-                user=request.user,
-                product=Product.objects.get(id=kwargs.get('pk')),
-            )
-            .exists()
-        ):
-            return True
+    def get_err_message(self):
+        path_segment = self.request.path.strip('/').split('/')[-1]
+        return self.ERR_MESSAGES.get(path_segment)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-
-        if self._has_already_exist(request, *args, **kwargs):
-            raise ProductAlreadyExist(self.get_err_message(request))
-
         return create_rating_favorite_shopping_cart(
             request,
             self.get_serializer_class(),
@@ -105,6 +86,9 @@ class ProductViewSet(ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete')
     queryset = Product.objects.all()
     permission_classes = (IsAuthenticatedOrReadOnly, IsSuperuserOrReadOnly)
+
+    def get_queryset(self):
+        return Product.objects.get_annotated_queryset(self.request.user)
 
     def get_serializer_class(self):
         if self.action in SAFE_ACTIONS:
