@@ -24,22 +24,24 @@ def create_rating_favorite_shopping_cart(
     serializer.is_valid(raise_exception=True)
     serializer.save()
 
-    instance = Product.objects.get_annotated_queryset(request.user, id=pk)
+    instance = get_object_or_404(
+        Product.objects.get_annotated_queryset(request.user), id=pk
+    )
 
     serializer = GetProductSerializer(instance)
     return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
 
-# def delete_rating_favorite_shopping_cart(request, django_model, pk):
-#     get_object_or_404(Product, id=pk)
+def delete_rating_favorite_shopping_cart(request, queryset, pk):
+    get_object_or_404(Product, id=pk)
 
-#     instance = django_model.objects.filter(user=request.user, recipe_id=pk)
-#     count, _ = instance.delete()
+    instance = queryset.filter(user=request.user, product_id=pk)
+    count, _ = instance.delete()
 
-#     if not count:
-#         raise ValidationError(
-#             'Продукт отсутствует в списке '
-#             f'\'{instance.model._meta.verbose_name}\'.'
-#         )
+    if not count:
+        raise ValidationError(
+            'Продукт отсутствует в списке '
+            f'\'{instance.model._meta.verbose_name}\'.'
+        )
 
-#     return Response(status=status.HTTP_204_NO_CONTENT)
+    return Response(status=status.HTTP_204_NO_CONTENT)

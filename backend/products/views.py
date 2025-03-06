@@ -16,8 +16,9 @@ from rest_framework.permissions import (
 from rest_framework.viewsets import ModelViewSet
 
 # Projects imports
-from .crud_for_rating_shopping_cart import (  # delete_rating_favorite_shopping_cart,
+from .crud_for_rating_shopping_cart import (
     create_rating_favorite_shopping_cart,
+    delete_rating_favorite_shopping_cart,
 )
 from products.constants import (
     FAVORITE_ALREADY_EXIST,
@@ -41,11 +42,11 @@ SAFE_ACTIONS = ('list', 'retrieve')
 @permission_classes((IsAuthenticatedOrReadOnly,))
 class RatingFavoriteShoppingCartViewSet(ModelViewSet):
 
-    ERR_MESSAGES = {
-        'rating': RATING_ALREADY_EXIST,
-        'favorite': FAVORITE_ALREADY_EXIST,
-        'shopping_cart': SHOPPING_CART_ALREADY_EXIST,
-    }
+    # ERR_MESSAGES = {
+    #     'rating': RATING_ALREADY_EXIST,
+    #     'favorite': FAVORITE_ALREADY_EXIST,
+    #     'shopping_cart': SHOPPING_CART_ALREADY_EXIST,
+    # }
     SERIALIZER_MAPPING = {
         'rating': RatingSerializer,
         'favorite': FavoriteSerializer,
@@ -57,27 +58,41 @@ class RatingFavoriteShoppingCartViewSet(ModelViewSet):
         'shopping_cart': ShoppingCart.objects.all(),
     }
 
+    def get_path_segment(self):
+        return self.request.path.strip('/').split('/')[-1]
+
     def get_serializer_class(self):
-        path_segment = self.request.path.strip('/').split('/')[-1]
+        path_segment = self.get_path_segment()
         return self.SERIALIZER_MAPPING.get(path_segment)
 
     def get_queryset(self):
-        path_segment = self.request.path.strip('/').split('/')[-1]
+        path_segment = self.get_path_segment()
         return self.QUERYSET_MAPPING.get(path_segment)
 
-    def get_err_message(self):
-        path_segment = self.request.path.strip('/').split('/')[-1]
-        return self.ERR_MESSAGES.get(path_segment)
+    # def get_err_message(self):
+    #     path_segment = self.request.path.strip('/').split('/')[-1]
+    #     return self.ERR_MESSAGES.get(path_segment)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
+        extra_data = None
+
+        if 'rating' in self.get_path_segment():
+            extra_data = {
+                'score': request.data.get('score'),
+            }
+
         return create_rating_favorite_shopping_cart(
             request,
             self.get_serializer_class(),
             pk=kwargs.get('pk'),
-            extra_data={
-                'score': request.data.get('score'),
-            },
+            extra_data=extra_data,
+        )
+
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        return delete_rating_favorite_shopping_cart(
+            request, self.get_queryset(), pk=kwargs.get('pk'),
         )
 
 
