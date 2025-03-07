@@ -6,8 +6,9 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 # Projects imports
-from .constants import DEFAULT_RATING, MIN_PRODUCT_PRICE, PRICE_ERR_MSG
+from .constants import DEFAULT_RATING, MIN_PRICE_VALUE, PRICE_ERR_MSG
 from products.models import (
+    Category,
     Favorite,
     Product,
     ProductProperty,
@@ -66,6 +67,13 @@ class ShoppingCartSerializer(BaseRatingFavoriteShoppingCartSerializer):
         ]
 
 
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+
 class PropertyValueSerializer(BaseRatingFavoriteShoppingCartSerializer):
     id = serializers.PrimaryKeyRelatedField(queryset=Property.objects.all())
 
@@ -88,6 +96,7 @@ class GetProductPropertySerializer(serializers.ModelSerializer):
 
 
 class GetProductSerializer(serializers.ModelSerializer):
+    category = CategorySerializer()
     properties = serializers.SerializerMethodField()
     creator = ShopUserRetrieveSerializer(read_only=True)
     rating = serializers.SerializerMethodField(method_name='get_rating')
@@ -124,11 +133,11 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('name', 'description', 'price', 'properties')
+        fields = ('name', 'description', 'price', 'category', 'properties')
         read_only_fields = ('creator',)
 
     def validate_price(self, value):
-        if value < MIN_PRODUCT_PRICE:
+        if value < MIN_PRICE_VALUE:
             raise serializers.ValidationError(PRICE_ERR_MSG)
         return value
 
