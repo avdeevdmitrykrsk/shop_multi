@@ -22,12 +22,6 @@ from .crud_for_rating_shopping_cart import (
     create_rating_favorite_shopping_cart,
     delete_rating_favorite_shopping_cart,
 )
-from products.constants import (
-    FAVORITE_ALREADY_EXIST,
-    RATING_ALREADY_EXIST,
-    SHOPPING_CART_ALREADY_EXIST,
-)
-from products.exceptions import ProductAlreadyExist
 from products.models import Favorite, Product, Rating, ShoppingCart
 from products.serializers import (
     FavoriteSerializer,
@@ -68,18 +62,13 @@ class RatingFavoriteShoppingCartViewSet(ModelViewSet):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        extra_data = None
 
-        if 'rating' in self.get_path_segment():
-            extra_data = {
-                'score': request.data.get('score'),
-            }
-
+        extra_fields = request.data.get('score')
         return create_rating_favorite_shopping_cart(
             request,
             self.get_serializer_class(),
             pk=kwargs.get('pk'),
-            extra_data=extra_data,
+            extra_fields=extra_fields,
         )
 
     @transaction.atomic
