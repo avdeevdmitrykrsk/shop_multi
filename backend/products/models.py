@@ -4,7 +4,6 @@ from django.db import models
 
 # Projects imports
 from .constants import (
-    DEFAULT_RATING,
     LONG_STR_CUT_VALUE,
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
