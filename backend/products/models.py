@@ -1,16 +1,91 @@
 # Thirdparty imports
 from django.contrib.auth import get_user_model
+from django.core.validators import (
+    MaxLengthValidator,
+    MaxValueValidator,
+    MinLengthValidator,
+    MinValueValidator,
+)
 from django.db import models
 
 # Projects imports
 from .constants import (
+    CATEGORY_NAME_MAX_LENGTH,
+    CATEGORY_SLUG_MAX_LENGTH,
     LONG_STR_CUT_VALUE,
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
+    MAX_PRICE_VALUE,
     MAX_VALUE_LENGTH,
+    MIN_NAME_LENGTH,
+    MIN_PRICE_VALUE,
 )
 
 User = get_user_model()
+
+
+class SubCategory(models.Model):
+    name = models.CharField(
+        max_length=CATEGORY_NAME_MAX_LENGTH,
+        verbose_name='Название',
+        help_text=(
+            f'Максимально допустимое число знаков - {CATEGORY_NAME_MAX_LENGTH}.'
+        ),
+        unique=True,
+        db_index=True,
+        null=False,
+        blank=False,
+    )
+    slug = models.SlugField(
+        max_length=CATEGORY_SLUG_MAX_LENGTH,
+        verbose_name='Слаг',
+        help_text=(
+            f'Максимально допустимое число знаков - {CATEGORY_SLUG_MAX_LENGTH}.'
+        ),
+        unique=True,
+        null=False,
+        blank=False,
+    )
+
+    class Meta:
+        ordering = ('name',)
+        verbose_name = 'Тэг'
+        verbose_name_plural = 'Тэги'
+
+    def __str__(self):
+        return self.name[:LONG_STR_CUT_VALUE]
+
+
+class Category(models.Model):
+    name = models.CharField(
+        max_length=CATEGORY_NAME_MAX_LENGTH,
+        verbose_name='Название',
+        help_text=(
+            f'Максимально допустимое число знаков - {CATEGORY_NAME_MAX_LENGTH}.'
+        ),
+        unique=True,
+        db_index=True,
+        null=False,
+        blank=False,
+    )
+    slug = models.SlugField(
+        max_length=CATEGORY_SLUG_MAX_LENGTH,
+        verbose_name='Слаг',
+        help_text=(
+            f'Максимально допустимое число знаков - {CATEGORY_SLUG_MAX_LENGTH}.'
+        ),
+        unique=True,
+        db_index=True,
+        null=False,
+        blank=False,
+    )
+
+    class Meta:
+        verbose_name = 'Категория продукта'
+        verbose_name_plural = 'Категории продуктов'
+
+    def __str__(self):
+        return f'{self.name}: {self.slug}'
 
 
 class Property(models.Model):
@@ -53,15 +128,32 @@ class ProductManager(models.Manager):
 class Product(models.Model):
     """Модель Продукта"""
 
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name='products_by_category',
+        blank=False,
+        null=False,
+    )
+    sub_categories = models.ManyToManyField(
+        to=SubCategory,
+        through='ProductSubCategory',
+        verbose_name='Подкатегория',
+        related_name='products_by_sub_category',
+    )
     name = models.CharField(
         max_length=MAX_NAME_LENGTH,
         verbose_name='Наименование',
         unique=True,
         blank=False,
+        db_index=True,
         help_text=(
             'Максимально допустимое число знаков - ',
             f'{MAX_NAME_LENGTH}.',
         ),
+        validators=[
+            MinLengthValidator(MIN_NAME_LENGTH),
+        ],
     )
     description = models.TextField(
         max_length=MAX_DESCRIPTION_LENGTH,
@@ -73,7 +165,13 @@ class Product(models.Model):
         ),
     )
     price = models.PositiveIntegerField(
-        verbose_name='Цена', help_text='Укажите цену', blank=False
+        verbose_name='Цена',
+        help_text='Укажите цену',
+        blank=False,
+        validators=[
+            MinValueValidator(MIN_PRICE_VALUE),
+            MaxValueValidator(MAX_PRICE_VALUE),
+        ],
     )
     properties = models.ManyToManyField(
         to=Property,
@@ -113,7 +211,7 @@ class Product(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.name
+        return self.name[:LONG_STR_CUT_VALUE]
 
 
 class ProductProperty(models.Model):
@@ -134,7 +232,6 @@ class ProductProperty(models.Model):
     )
 
     class Meta:
-        unique_together = ('product', 'property')
         verbose_name = 'Характеристика продукта'
         verbose_name_plural = 'Характеристики продуктов'
         constraints = [
@@ -145,6 +242,37 @@ class ProductProperty(models.Model):
 
     def __str__(self):
         return f'{self.product.name}: {self.property.name} - {self.value}'
+
+
+class ProductSubCategory(models.Model):
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='product_sub_category_prod',
+        null=False,
+        blank=False,
+    )
+    sub_category = models.ForeignKey(
+        SubCategory,
+        on_delete=models.CASCADE,
+        related_name='product_sub_category_cat',
+        null=False,
+        blank=False,
+    )
+
+    class Meta:
+        verbose_name = 'Подкатегория продукта'
+        verbose_name_plural = 'Подкатегории продуктов'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('product', 'sub_category'),
+                name='unique_product_sub_category',
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.product.name}: {self.sub_category.name}'
 
 
 class RatingFavoriteShoppingCart(models.Model):
