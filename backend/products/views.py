@@ -22,7 +22,14 @@ from .crud_for_rating_shopping_cart import (
     create_rating_favorite_shopping_cart,
     delete_rating_favorite_shopping_cart,
 )
-from products.models import Category, Favorite, Product, Rating, ShoppingCart, SubCategory
+from products.models import (
+    Category,
+    Favorite,
+    Product,
+    Rating,
+    ShoppingCart,
+    SubCategory,
+)
 from products.serializers import (
     CategorySerializer,
     FavoriteSerializer,

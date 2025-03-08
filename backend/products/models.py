@@ -12,6 +12,7 @@ from django.db import models
 from .constants import (
     CATEGORY_NAME_MAX_LENGTH,
     CATEGORY_SLUG_MAX_LENGTH,
+    DEFAULT_ARTICLE,
     LONG_STR_CUT_VALUE,
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
@@ -213,7 +214,9 @@ class Product(models.Model):
             max_article = Product.objects.aggregate(models.Max('article'))[
                 'article__max'
             ]
-            self.article = max_article + 1 if max_article is not None else 1
+            self.article = (
+                max_article + 1 if max_article is not None else DEFAULT_ARTICLE
+            )
         super().save(*args, **kwargs)
 
     def __str__(self):
