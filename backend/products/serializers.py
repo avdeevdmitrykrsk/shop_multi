@@ -125,7 +125,19 @@ class GetProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = (
+            'name',
+            'description',
+            'category',
+            'sub_categories',
+            'properties',
+            'price',
+            'rating',
+            'article',
+            'creator',
+            'is_favorited',
+            'is_in_shopping_cart',
+        )
 
     def get_rating(self, instance):
         rating = Rating.objects.filter(product_id=instance.id).aggregate(
@@ -138,12 +150,8 @@ class GetProductSerializer(serializers.ModelSerializer):
         return rating
 
     def get_sub_categories(self, instance):
-        sub_categories = (
-            instance.sub_categories.all()
-        )
-        serializer = SubCategorySerializer(
-            sub_categories, many=True
-        )
+        sub_categories = instance.sub_categories.all()
+        serializer = SubCategorySerializer(sub_categories, many=True)
         return serializer.data
 
     def get_properties(self, instance):
@@ -160,8 +168,20 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ('name', 'description', 'price', 'category', 'properties')
-        read_only_fields = ('creator',)
+        fields = (
+            'name',
+            'description',
+            'price',
+            'category',
+            'sub_categories',
+            'properties',
+        )
+        read_only_fields = (
+            'creator',
+            'created_at',
+            'updated_at',
+            'article',
+        )
 
     def validate_price(self, value):
         if value < MIN_PRICE_VALUE:
@@ -190,6 +210,7 @@ class ProductSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         properties_data = validated_data.pop('properties')
         sub_categories_data = validated_data.pop('sub_categories')
+
         instance = Product.objects.create(**validated_data)
 
         self.sub_categories_create(sub_categories_data, instance)

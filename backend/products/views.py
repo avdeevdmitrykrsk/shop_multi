@@ -37,12 +37,14 @@ from users.permissions import IsSuperuserOrReadOnly
 SAFE_ACTIONS = ('list', 'retrieve')
 
 
+@permission_classes((AllowAny,))
 class SubCategoryViewSet(ModelViewSet):
 
     queryset = SubCategory.objects.all()
     serializer_class = SubCategorySerializer
 
 
+@permission_classes((AllowAny,))
 class CategoryViewSet(ModelViewSet):
 
     queryset = Category.objects.all()
