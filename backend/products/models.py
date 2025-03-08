@@ -29,7 +29,8 @@ class SubCategory(models.Model):
         max_length=CATEGORY_NAME_MAX_LENGTH,
         verbose_name='Название',
         help_text=(
-            f'Максимально допустимое число знаков - {CATEGORY_NAME_MAX_LENGTH}.'
+            'Максимально допустимое число знаков'
+            f' - {CATEGORY_NAME_MAX_LENGTH}.'
         ),
         unique=True,
         db_index=True,
@@ -40,7 +41,8 @@ class SubCategory(models.Model):
         max_length=CATEGORY_SLUG_MAX_LENGTH,
         verbose_name='Слаг',
         help_text=(
-            f'Максимально допустимое число знаков - {CATEGORY_SLUG_MAX_LENGTH}.'
+            'Максимально допустимое число знаков'
+            f' - {CATEGORY_SLUG_MAX_LENGTH}.'
         ),
         unique=True,
         null=False,
@@ -61,7 +63,8 @@ class Category(models.Model):
         max_length=CATEGORY_NAME_MAX_LENGTH,
         verbose_name='Название',
         help_text=(
-            f'Максимально допустимое число знаков - {CATEGORY_NAME_MAX_LENGTH}.'
+            'Максимально допустимое число знаков'
+            f' - {CATEGORY_NAME_MAX_LENGTH}.'
         ),
         unique=True,
         db_index=True,
@@ -72,7 +75,8 @@ class Category(models.Model):
         max_length=CATEGORY_SLUG_MAX_LENGTH,
         verbose_name='Слаг',
         help_text=(
-            f'Максимально допустимое число знаков - {CATEGORY_SLUG_MAX_LENGTH}.'
+            'Максимально допустимое число знаков'
+            f' - {CATEGORY_SLUG_MAX_LENGTH}.'
         ),
         unique=True,
         db_index=True,
@@ -111,18 +115,20 @@ class ProductManager(models.Manager):
 
     def get_annotated_queryset(self, user):
         queryset = super().get_queryset()
-        return queryset.annotate(
-            is_favorited=models.Exists(
-                Favorite.objects.filter(
-                    user=user, product=models.OuterRef('pk')
-                )
-            ),
-            is_in_shopping_cart=models.Exists(
-                ShoppingCart.objects.filter(
-                    user=user, product=models.OuterRef('pk')
-                )
-            ),
-        ).order_by('name', 'creator')
+        if user.is_authenticated:
+            return queryset.annotate(
+                is_favorited=models.Exists(
+                    Favorite.objects.filter(
+                        user=user, product=models.OuterRef('pk')
+                    )
+                ),
+                is_in_shopping_cart=models.Exists(
+                    ShoppingCart.objects.filter(
+                        user=user, product=models.OuterRef('pk')
+                    )
+                ),
+            ).order_by('name', 'creator')
+        return queryset
 
 
 class Product(models.Model):

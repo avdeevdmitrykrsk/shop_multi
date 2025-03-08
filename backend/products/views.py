@@ -22,17 +22,31 @@ from .crud_for_rating_shopping_cart import (
     create_rating_favorite_shopping_cart,
     delete_rating_favorite_shopping_cart,
 )
-from products.models import Favorite, Product, Rating, ShoppingCart
+from products.models import Category, Favorite, Product, Rating, ShoppingCart, SubCategory
 from products.serializers import (
+    CategorySerializer,
     FavoriteSerializer,
     GetProductSerializer,
     ProductSerializer,
     RatingSerializer,
     ShoppingCartSerializer,
+    SubCategorySerializer,
 )
 from users.permissions import IsSuperuserOrReadOnly
 
 SAFE_ACTIONS = ('list', 'retrieve')
+
+
+class SubCategoryViewSet(ModelViewSet):
+
+    queryset = SubCategory.objects.all()
+    serializer_class = SubCategorySerializer
+
+
+class CategoryViewSet(ModelViewSet):
+
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
 
 
 @permission_classes((IsAuthenticatedOrReadOnly,))

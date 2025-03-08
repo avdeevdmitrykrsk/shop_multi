@@ -12,9 +12,11 @@ from products.models import (
     Favorite,
     Product,
     ProductProperty,
+    ProductSubCategory,
     Property,
     Rating,
     ShoppingCart,
+    SubCategory,
 )
 from users.serializers import ShopUserRetrieveSerializer
 
@@ -74,6 +76,13 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class SubCategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = SubCategory
+        fields = '__all__'
+
+
 class PropertyValueSerializer(BaseRatingFavoriteShoppingCartSerializer):
     id = serializers.PrimaryKeyRelatedField(queryset=Property.objects.all())
 
@@ -95,8 +104,17 @@ class GetProductPropertySerializer(serializers.ModelSerializer):
         return Property.objects.get(id=obj.property.id).name
 
 
+class GetProductSubCategorySerializer(serializers.ModelSerializer):
+    sub_category = SubCategorySerializer()
+
+    class Meta:
+        model = ProductSubCategory
+        fields = ('id', 'sub_category')
+
+
 class GetProductSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
+    sub_categories = serializers.SerializerMethodField()
     properties = serializers.SerializerMethodField()
     creator = ShopUserRetrieveSerializer(read_only=True)
     rating = serializers.SerializerMethodField(method_name='get_rating')
@@ -118,6 +136,15 @@ class GetProductSerializer(serializers.ModelSerializer):
             rating = DEFAULT_RATING
 
         return rating
+
+    def get_sub_categories(self, instance):
+        sub_categories = (
+            instance.sub_categories.all()
+        )
+        serializer = SubCategorySerializer(
+            sub_categories, many=True
+        )
+        return serializer.data
 
     def get_properties(self, instance):
         product_properties = instance.product_property_prod.all()
@@ -145,6 +172,12 @@ class ProductSerializer(serializers.ModelSerializer):
         serializer = GetProductSerializer(instance)
         return serializer.data
 
+    def sub_categories_create(self, sub_categories, product):
+        for sub_category in sub_categories:
+            ProductSubCategory.objects.create(
+                product=product, sub_category=sub_category
+            )
+
     def product_properties_create(self, properties, product):
         for property in properties:
             ProductProperty.objects.create(
@@ -156,8 +189,10 @@ class ProductSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         properties_data = validated_data.pop('properties')
+        sub_categories_data = validated_data.pop('sub_categories')
         instance = Product.objects.create(**validated_data)
 
+        self.sub_categories_create(sub_categories_data, instance)
         self.product_properties_create(properties_data, instance)
         return instance
 
