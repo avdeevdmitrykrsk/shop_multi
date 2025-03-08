@@ -25,7 +25,8 @@ from .constants import (
 User = get_user_model()
 
 
-class SubCategory(models.Model):
+class BaseCategorySubCategory(models.Model):
+
     name = models.CharField(
         max_length=CATEGORY_NAME_MAX_LENGTH,
         verbose_name='Название',
@@ -46,12 +47,19 @@ class SubCategory(models.Model):
             f' - {CATEGORY_SLUG_MAX_LENGTH}.'
         ),
         unique=True,
+        db_index=True,
         null=False,
         blank=False,
     )
 
     class Meta:
-        ordering = ('name',)
+        abstract = True
+        ordering = ('name', 'slug')
+
+
+class SubCategory(BaseCategorySubCategory):
+
+    class Meta(BaseCategorySubCategory.Meta):
         verbose_name = 'Тэг'
         verbose_name_plural = 'Тэги'
 
@@ -59,33 +67,9 @@ class SubCategory(models.Model):
         return self.name[:LONG_STR_CUT_VALUE]
 
 
-class Category(models.Model):
-    name = models.CharField(
-        max_length=CATEGORY_NAME_MAX_LENGTH,
-        verbose_name='Название',
-        help_text=(
-            'Максимально допустимое число знаков'
-            f' - {CATEGORY_NAME_MAX_LENGTH}.'
-        ),
-        unique=True,
-        db_index=True,
-        null=False,
-        blank=False,
-    )
-    slug = models.SlugField(
-        max_length=CATEGORY_SLUG_MAX_LENGTH,
-        verbose_name='Слаг',
-        help_text=(
-            'Максимально допустимое число знаков'
-            f' - {CATEGORY_SLUG_MAX_LENGTH}.'
-        ),
-        unique=True,
-        db_index=True,
-        null=False,
-        blank=False,
-    )
+class Category(BaseCategorySubCategory):
 
-    class Meta:
+    class Meta(BaseCategorySubCategory.Meta):
         verbose_name = 'Категория продукта'
         verbose_name_plural = 'Категории продуктов'
 
@@ -153,6 +137,7 @@ class Product(models.Model):
         verbose_name='Наименование',
         unique=True,
         blank=False,
+        null=False,
         db_index=True,
         help_text=(
             'Максимально допустимое число знаков - ',
