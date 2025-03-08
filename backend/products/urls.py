@@ -3,10 +3,19 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 # Projects imports
-from .views import ProductViewSet, RatingFavoriteShoppingCartViewSet
+from .views import (
+    CategoryViewSet,
+    ProductViewSet,
+    RatingFavoriteShoppingCartViewSet,
+    SubCategoryViewSet,
+)
 
 router = DefaultRouter()
 router.register(r'products', ProductViewSet, basename='products_v1')
+router.register(r'category', CategoryViewSet, basename='category_v1')
+router.register(
+    r'sub_category', SubCategoryViewSet, basename='sub_category_v1'
+)
 
 urlpatterns = [
     path('', include(router.urls)),
