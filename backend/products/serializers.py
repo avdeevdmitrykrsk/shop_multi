@@ -1,6 +1,6 @@
 # Thirdparty imports
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Avg, F
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -196,17 +196,37 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def sub_categories_create(self, sub_categories, product):
         for sub_category in sub_categories:
-            ProductSubCategory.objects.create(
-                product=product, sub_category=sub_category
-            )
+            try:
+                ProductSubCategory.objects.create(
+                    product=product, sub_category=sub_category
+                )
+            except IntegrityError:
+                raise serializers.ValidationError(
+                    {
+                        'detail': (
+                            'Нельзя указывать несколько sub_categories'
+                            ' с одинаковым id.'
+                        )
+                    }
+                )
 
     def product_properties_create(self, properties, product):
         for property in properties:
-            ProductProperty.objects.create(
-                product=product,
-                property=property.get('id'),
-                value=property.get('value'),
-            )
+            try:
+                ProductProperty.objects.create(
+                    product=product,
+                    property=property.get('id'),
+                    value=property.get('value'),
+                )
+            except IntegrityError:
+                raise serializers.ValidationError(
+                    {
+                        'detail': (
+                            'Нельзя указывать несколько properties'
+                            ' с одинаковым id.'
+                        )
+                    }
+                )
 
     @transaction.atomic
     def create(self, validated_data):
