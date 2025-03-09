@@ -83,6 +83,13 @@ class SubCategorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class GetSubCategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = SubCategory
+        fields = '__all__'
+
+
 class PropertyValueSerializer(BaseRatingFavoriteShoppingCartSerializer):
     id = serializers.PrimaryKeyRelatedField(queryset=Property.objects.all())
 
@@ -102,14 +109,6 @@ class GetProductPropertySerializer(serializers.ModelSerializer):
 
     def get_name(self, obj):
         return Property.objects.get(id=obj.property.id).name
-
-
-class GetProductSubCategorySerializer(serializers.ModelSerializer):
-    sub_category = SubCategorySerializer()
-
-    class Meta:
-        model = ProductSubCategory
-        fields = ('id', 'sub_category')
 
 
 class GetProductSerializer(serializers.ModelSerializer):
@@ -151,7 +150,7 @@ class GetProductSerializer(serializers.ModelSerializer):
 
     def get_sub_categories(self, instance):
         sub_categories = instance.sub_categories.all()
-        serializer = SubCategorySerializer(sub_categories, many=True)
+        serializer = GetSubCategorySerializer(sub_categories, many=True)
         return serializer.data
 
     def get_properties(self, instance):
@@ -165,6 +164,9 @@ class GetProductSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
 
     properties = PropertyValueSerializer(many=True)
+    sub_categories = serializers.PrimaryKeyRelatedField(
+        queryset=SubCategory.objects.all(), many=True
+    )
 
     class Meta:
         model = Product

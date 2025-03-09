@@ -56,15 +56,15 @@ class BaseCategorySubCategory(models.Model):
         abstract = True
         ordering = ('name', 'slug')
 
+    def __str__(self):
+        return f'{self.name}: {self.slug}'
+
 
 class SubCategory(BaseCategorySubCategory):
 
     class Meta(BaseCategorySubCategory.Meta):
-        verbose_name = 'Тэг'
-        verbose_name_plural = 'Тэги'
-
-    def __str__(self):
-        return self.name[:LONG_STR_CUT_VALUE]
+        verbose_name = 'Подкатегория продукта'
+        verbose_name_plural = 'Подгатегории продуктов'
 
 
 class Category(BaseCategorySubCategory):
@@ -73,9 +73,6 @@ class Category(BaseCategorySubCategory):
         verbose_name = 'Категория продукта'
         verbose_name_plural = 'Категории продуктов'
 
-    def __str__(self):
-        return f'{self.name}: {self.slug}'
-
 
 class Property(models.Model):
 
@@ -83,6 +80,7 @@ class Property(models.Model):
         max_length=MAX_NAME_LENGTH,
         verbose_name='Характеристика',
         unique=True,
+        db_index=True,
         blank=False,
         null=False,
     )
@@ -93,7 +91,7 @@ class Property(models.Model):
         verbose_name_plural = 'Характеристики'
 
     def __str__(self):
-        return self.name
+        return self.name[:LONG_STR_CUT_VALUE]
 
 
 class ProductManager(models.Manager):
@@ -151,6 +149,7 @@ class Product(models.Model):
         max_length=MAX_DESCRIPTION_LENGTH,
         verbose_name='Описание',
         blank=False,
+        null=False,
         help_text=(
             'Максимально допустимое число знаков - ',
             f'{MAX_DESCRIPTION_LENGTH}.',
@@ -160,6 +159,7 @@ class Product(models.Model):
         verbose_name='Цена',
         help_text='Укажите цену',
         blank=False,
+        null=False,
         validators=[
             MinValueValidator(MIN_PRICE_VALUE),
             MaxValueValidator(MAX_PRICE_VALUE),
