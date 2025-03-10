@@ -1,3 +1,6 @@
+# Standart lib imports
+from collections import OrderedDict
+
 # Thirdparty imports
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
@@ -90,8 +93,9 @@ class GetSubCategorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class PropertyValueSerializer(BaseRatingFavoriteShoppingCartSerializer):
-    id = serializers.PrimaryKeyRelatedField(queryset=Property.objects.all())
+class PropertyValueSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='property_id')
+    value = serializers.CharField()
 
     class Meta:
         model = ProductProperty
@@ -194,66 +198,37 @@ class ProductSerializer(serializers.ModelSerializer):
         serializer = GetProductSerializer(instance)
         return serializer.data
 
-    def sub_categories_create(self, sub_categories, product):
+    def product_sub_categories_create(self, sub_categories, product):
         for sub_category in sub_categories:
-            try:
-                ProductSubCategory.objects.create(
-                    product=product, sub_category=sub_category
-                )
-            except IntegrityError:
-                raise serializers.ValidationError(
-                    {
-                        'detail': (
-                            'Нельзя указывать несколько sub_categories'
-                            ' с одинаковым id.'
-                        )
-                    }
-                )
+            ProductSubCategory.objects.create(
+                product=product, sub_category=sub_category
+            )
 
     def product_properties_create(self, properties, product):
         for property in properties:
-            try:
-                ProductProperty.objects.create(
-                    product=product,
-                    property=property.get('id'),
-                    value=property.get('value'),
-                )
-            except IntegrityError:
-                raise serializers.ValidationError(
-                    {
-                        'detail': (
-                            'Нельзя указывать несколько properties'
-                            ' с одинаковым id.'
-                        )
-                    }
-                )
+            ProductProperty.objects.create(product=product, **property)
 
     @transaction.atomic
     def create(self, validated_data):
         properties_data = validated_data.pop('properties')
         sub_categories_data = validated_data.pop('sub_categories')
-
         instance = Product.objects.create(**validated_data)
 
-        self.sub_categories_create(sub_categories_data, instance)
         self.product_properties_create(properties_data, instance)
+        self.sub_categories_create(sub_categories_data, instance)
         return instance
 
     @transaction.atomic
     def update(self, instance, validated_data):
         properties = validated_data.pop('properties')
+        sub_categories = validated_data.pop('sub_categories')
 
-        if properties:
-            for property in properties:
-                instances = ProductProperty.objects.filter(
-                    product_id=instance.id
-                )
-                instances.delete()
+        if properties is not None:
+            instance.product_property.clear()
+            self.product_properties_create(properties, instance)
 
-                self.product_properties_create(properties, instance)
+        if sub_categories is not None:
+            instance.sub_categories.clear()
+            self.product_sub_categories_create(sub_categories, instance)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
-        return instance
+        return super().update(instance, validated_data)
