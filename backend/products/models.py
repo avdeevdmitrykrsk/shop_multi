@@ -25,41 +25,8 @@ from .constants import (
 User = get_user_model()
 
 
-class SubCategory(models.Model):
-    name = models.CharField(
-        max_length=CATEGORY_NAME_MAX_LENGTH,
-        verbose_name='Название',
-        help_text=(
-            'Максимально допустимое число знаков'
-            f' - {CATEGORY_NAME_MAX_LENGTH}.'
-        ),
-        unique=True,
-        db_index=True,
-        null=False,
-        blank=False,
-    )
-    slug = models.SlugField(
-        max_length=CATEGORY_SLUG_MAX_LENGTH,
-        verbose_name='Слаг',
-        help_text=(
-            'Максимально допустимое число знаков'
-            f' - {CATEGORY_SLUG_MAX_LENGTH}.'
-        ),
-        unique=True,
-        null=False,
-        blank=False,
-    )
+class BaseCategorySubCategory(models.Model):
 
-    class Meta:
-        ordering = ('name',)
-        verbose_name = 'Тэг'
-        verbose_name_plural = 'Тэги'
-
-    def __str__(self):
-        return self.name[:LONG_STR_CUT_VALUE]
-
-
-class Category(models.Model):
     name = models.CharField(
         max_length=CATEGORY_NAME_MAX_LENGTH,
         verbose_name='Название',
@@ -86,11 +53,25 @@ class Category(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Категория продукта'
-        verbose_name_plural = 'Категории продуктов'
+        abstract = True
+        ordering = ('name', 'slug')
 
     def __str__(self):
         return f'{self.name}: {self.slug}'
+
+
+class SubCategory(BaseCategorySubCategory):
+
+    class Meta(BaseCategorySubCategory.Meta):
+        verbose_name = 'Подкатегория продукта'
+        verbose_name_plural = 'Подгатегории продуктов'
+
+
+class Category(BaseCategorySubCategory):
+
+    class Meta(BaseCategorySubCategory.Meta):
+        verbose_name = 'Категория продукта'
+        verbose_name_plural = 'Категории продуктов'
 
 
 class Property(models.Model):
@@ -99,6 +80,7 @@ class Property(models.Model):
         max_length=MAX_NAME_LENGTH,
         verbose_name='Характеристика',
         unique=True,
+        db_index=True,
         blank=False,
         null=False,
     )
@@ -109,7 +91,7 @@ class Property(models.Model):
         verbose_name_plural = 'Характеристики'
 
     def __str__(self):
-        return self.name
+        return self.name[:LONG_STR_CUT_VALUE]
 
 
 class ProductManager(models.Manager):
@@ -153,6 +135,7 @@ class Product(models.Model):
         verbose_name='Наименование',
         unique=True,
         blank=False,
+        null=False,
         db_index=True,
         help_text=(
             'Максимально допустимое число знаков - ',
@@ -166,6 +149,7 @@ class Product(models.Model):
         max_length=MAX_DESCRIPTION_LENGTH,
         verbose_name='Описание',
         blank=False,
+        null=False,
         help_text=(
             'Максимально допустимое число знаков - ',
             f'{MAX_DESCRIPTION_LENGTH}.',
@@ -175,6 +159,7 @@ class Product(models.Model):
         verbose_name='Цена',
         help_text='Укажите цену',
         blank=False,
+        null=False,
         validators=[
             MinValueValidator(MIN_PRICE_VALUE),
             MaxValueValidator(MAX_PRICE_VALUE),
