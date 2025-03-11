@@ -112,7 +112,7 @@ class GetProductPropertySerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'value')
 
     def get_name(self, obj):
-        return Property.objects.get(id=obj.property.id).name
+        return obj.property.name
 
 
 class GetProductSerializer(serializers.ModelSerializer):
@@ -129,6 +129,7 @@ class GetProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = (
+            'id',
             'name',
             'description',
             'category',

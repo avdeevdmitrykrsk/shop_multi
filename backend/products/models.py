@@ -97,7 +97,22 @@ class Property(models.Model):
 class ProductManager(models.Manager):
 
     def get_annotated_queryset(self, user):
-        queryset = super().get_queryset()
+        queryset = (
+            super()
+            .get_queryset()
+            .select_related('creator', 'category')
+            .prefetch_related(
+                models.Prefetch(
+                    'product_sub_category_prod__sub_category',
+                    queryset=SubCategory.objects.all(),
+                ),
+                models.Prefetch(
+                    'product_property_prod__property',
+                    queryset=Property.objects.all(),
+                ),
+            )
+        )
+
         if user.is_authenticated:
             return queryset.annotate(
                 is_favorited=models.Exists(
@@ -110,7 +125,7 @@ class ProductManager(models.Manager):
                         user=user, product=models.OuterRef('pk')
                     )
                 ),
-            ).order_by('name', 'creator')
+            ).order_by('id', 'name', 'creator')
         return queryset
 
 
