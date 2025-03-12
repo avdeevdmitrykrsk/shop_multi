@@ -105,12 +105,10 @@ class ProductManager(models.Manager):
         queryset = (
             super()
             .get_queryset()
-            .select_related('creator', 'category')
+            .select_related(
+                'creator', 'category', 'sub_category', 'article_by_product'
+            )
             .prefetch_related(
-                models.Prefetch(
-                    'sub_categories',
-                    queryset=SubCategory.objects.all(),
-                ),
                 models.Prefetch(
                     'product_property_prod',
                     queryset=ProductProperty.objects.all().select_related(
@@ -122,9 +120,9 @@ class ProductManager(models.Manager):
                 rating=Coalesce(
                     models.Subquery(rating_sub_query),
                     models.Value(DEFAULT_RATING),
-                )
+                ),
             )
-        )
+        ).order_by('id', 'name', 'creator')
 
         if user.is_authenticated:
             return queryset.annotate(
@@ -138,7 +136,7 @@ class ProductManager(models.Manager):
                         user=user, product=models.OuterRef('pk')
                     )
                 ),
-            ).order_by('id', 'name', 'creator')
+            )
         return queryset
 
 
@@ -152,11 +150,13 @@ class Product(models.Model):
         blank=False,
         null=False,
     )
-    sub_categories = models.ManyToManyField(
-        to=SubCategory,
-        through='ProductSubCategory',
-        verbose_name='Подкатегория',
+    sub_category = models.ForeignKey(
+        SubCategory,
+        on_delete=models.CASCADE,
         related_name='products_by_sub_category',
+        verbose_name='Подкатегория',
+        blank=False,
+        null=False,
     )
     name = models.CharField(
         max_length=MAX_NAME_LENGTH,
@@ -218,16 +218,6 @@ class Product(models.Model):
         ordering = ('name',)
         verbose_name = 'Продукт'
         verbose_name_plural = 'Продукты'
-
-    # def save(self, *args, **kwargs):
-    #     if not self.article:
-    #         max_article = Product.objects.aggregate(models.Max('article'))[
-    #             'article__max'
-    #         ]
-    #         self.article = (
-    #             max_article + 1 if max_article is not None else DEFAULT_ARTICLE
-    #         )
-    #     super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name[:LONG_STR_CUT_VALUE]
@@ -295,35 +285,35 @@ class ProductProperty(models.Model):
         return f'{self.product.name}: {self.property.name} - {self.value}'
 
 
-class ProductSubCategory(models.Model):
+# class ProductSubCategory(models.Model):
 
-    product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name='product_sub_category_prod',
-        null=False,
-        blank=False,
-    )
-    sub_category = models.ForeignKey(
-        SubCategory,
-        on_delete=models.CASCADE,
-        related_name='product_sub_category_cat',
-        null=False,
-        blank=False,
-    )
+#     product = models.ForeignKey(
+#         Product,
+#         on_delete=models.CASCADE,
+#         related_name='product_sub_category_prod',
+#         null=False,
+#         blank=False,
+#     )
+#     sub_category = models.ForeignKey(
+#         SubCategory,
+#         on_delete=models.CASCADE,
+#         related_name='product_sub_category_cat',
+#         null=False,
+#         blank=False,
+#     )
 
-    class Meta:
-        verbose_name = 'Подкатегория продукта'
-        verbose_name_plural = 'Подкатегории продуктов'
-        constraints = [
-            models.UniqueConstraint(
-                fields=('product', 'sub_category'),
-                name='unique_product_sub_category',
-            )
-        ]
+#     class Meta:
+#         verbose_name = 'Подкатегория продукта'
+#         verbose_name_plural = 'Подкатегории продуктов'
+#         constraints = [
+#             models.UniqueConstraint(
+#                 fields=('product', 'sub_category'),
+#                 name='unique_product_sub_category',
+#             )
+#         ]
 
-    def __str__(self):
-        return f'{self.product.name}: {self.sub_category.name}'
+#     def __str__(self):
+#         return f'{self.product.name}: {self.sub_category.name}'
 
 
 class RatingFavoriteShoppingCart(models.Model):

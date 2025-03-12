@@ -4,7 +4,7 @@ from collections import OrderedDict
 # Thirdparty imports
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
-from django.db.models import Avg, F, Prefetch
+from django.db.models import Avg, F, Max, Prefetch
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
@@ -16,11 +16,11 @@ from .constants import (
     PRICE_ERR_MSG,
 )
 from products.models import (
+    Article,
     Category,
     Favorite,
     Product,
     ProductProperty,
-    ProductSubCategory,
     Property,
     Rating,
     ShoppingCart,
@@ -91,13 +91,6 @@ class SubCategorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class GetSubCategorySerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = SubCategory
-        fields = '__all__'
-
-
 class PropertyValueSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='property_id')
     value = serializers.CharField()
@@ -121,11 +114,12 @@ class GetProductPropertySerializer(serializers.ModelSerializer):
 
 
 class GetProductSerializer(serializers.ModelSerializer):
+    article = serializers.SerializerMethodField()
     category = CategorySerializer(read_only=True)
-    sub_categories = serializers.SerializerMethodField()
+    sub_category =SubCategorySerializer(read_only=True)
     properties = serializers.SerializerMethodField()
     creator = ShopUserRetrieveSerializer(read_only=True)
-    rating = serializers.IntegerField()
+    rating = serializers.IntegerField(default=DEFAULT_RATING)
     is_favorited = serializers.BooleanField(default=False, read_only=True)
     is_in_shopping_cart = serializers.BooleanField(
         default=False, read_only=True
@@ -138,7 +132,7 @@ class GetProductSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'category',
-            'sub_categories',
+            'sub_category',
             'properties',
             'price',
             'rating',
@@ -149,12 +143,7 @@ class GetProductSerializer(serializers.ModelSerializer):
         )
 
     def get_article(self, instance):
-        return instance.article_by_product.article
-
-    def get_sub_categories(self, instance):
-        sub_categories = instance.sub_categories.all()
-        serializer = GetSubCategorySerializer(sub_categories, many=True)
-        return serializer.data
+        return instance.article_by_product.first().article
 
     def get_properties(self, instance):
         product_properties = instance.product_property_prod.all()
@@ -166,11 +155,7 @@ class GetProductSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
 
-    article = serializers.SerializerMethodField()
     properties = PropertyValueSerializer(many=True)
-    sub_categories = serializers.PrimaryKeyRelatedField(
-        queryset=SubCategory.objects.all(), many=True
-    )
 
     class Meta:
         model = Product
@@ -179,7 +164,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'description',
             'price',
             'category',
-            'sub_categories',
+            'sub_category',
             'properties',
         )
         read_only_fields = (
@@ -199,17 +184,21 @@ class ProductSerializer(serializers.ModelSerializer):
         serializer = GetProductSerializer(instance)
         return serializer.data
 
-    def _make_article():
-        pass
+    def _get_prefix(instance):
+        return f'{instance.category[:3]}'
 
     def article_create(self, instance):
-        pass
+        max_article = (
+            Article.objects.all()
+            .values('article')
+            .aggregate(Max('article'))['article__max']
+        )
 
-    def product_sub_categories_create(self, sub_categories, product):
-        for sub_category in sub_categories:
-            ProductSubCategory.objects.create(
-                product=product, sub_category=sub_category
-            )
+        article = DEFAULT_ARTICLE
+        if max_article is not None:
+            article = max_article + '1'
+
+        Article.objects.create(product=instance, article=article)
 
     def product_properties_create(self, properties, product):
         for property in properties:
@@ -218,25 +207,18 @@ class ProductSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         properties_data = validated_data.pop('properties')
-        sub_categories_data = validated_data.pop('sub_categories')
         instance = Product.objects.create(**validated_data)
 
         self.article_create(instance)
         self.product_properties_create(properties_data, instance)
-        self.product_sub_categories_create(sub_categories_data, instance)
         return instance
 
     @transaction.atomic
     def update(self, instance, validated_data):
         properties = validated_data.pop('properties')
-        sub_categories = validated_data.pop('sub_categories')
 
         if properties is not None:
             instance.product_property.clear()
             self.product_properties_create(properties, instance)
-
-        if sub_categories is not None:
-            instance.sub_categories.clear()
-            self.product_sub_categories_create(sub_categories, instance)
 
         return super().update(instance, validated_data)

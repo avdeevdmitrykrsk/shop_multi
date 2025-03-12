@@ -31,7 +31,6 @@ from products.serializers import (
     CategorySerializer,
     FavoriteSerializer,
     GetProductSerializer,
-    GetSubCategorySerializer,
     ProductSerializer,
     RatingSerializer,
     ShoppingCartSerializer,
