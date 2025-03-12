@@ -1,18 +1,19 @@
 # Thirdparty imports
 from django.contrib.auth import get_user_model
 from django.core.validators import (
-    MaxLengthValidator,
     MaxValueValidator,
     MinLengthValidator,
     MinValueValidator,
 )
 from django.db import models
+from django.db.models.functions import Coalesce
 
 # Projects imports
 from .constants import (
     CATEGORY_NAME_MAX_LENGTH,
     CATEGORY_SLUG_MAX_LENGTH,
     DEFAULT_ARTICLE,
+    DEFAULT_RATING,
     LONG_STR_CUT_VALUE,
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
@@ -97,19 +98,31 @@ class Property(models.Model):
 class ProductManager(models.Manager):
 
     def get_annotated_queryset(self, user):
+        rating_sub_query = Rating.objects.filter(
+            product=models.OuterRef('pk')
+        ).values('score')
+
         queryset = (
             super()
             .get_queryset()
             .select_related('creator', 'category')
             .prefetch_related(
                 models.Prefetch(
-                    'product_sub_category_prod__sub_category',
+                    'sub_categories',
                     queryset=SubCategory.objects.all(),
                 ),
                 models.Prefetch(
-                    'product_property_prod__property',
-                    queryset=Property.objects.all(),
+                    'product_property_prod',
+                    queryset=ProductProperty.objects.all().select_related(
+                        'property'
+                    ),
                 ),
+            )
+            .annotate(
+                rating=Coalesce(
+                    models.Subquery(rating_sub_query),
+                    models.Value(DEFAULT_RATING),
+                )
             )
         )
 
@@ -192,9 +205,6 @@ class Product(models.Model):
         on_delete=models.CASCADE,
         null=False,
     )
-    article = models.PositiveBigIntegerField(
-        verbose_name='Артикул', blank=False, null=False, unique=True
-    )
     created_at = models.DateTimeField(
         verbose_name='Дата создания', blank=False, auto_now_add=True
     )
@@ -209,18 +219,50 @@ class Product(models.Model):
         verbose_name = 'Продукт'
         verbose_name_plural = 'Продукты'
 
-    def save(self, *args, **kwargs):
-        if not self.article:
-            max_article = Product.objects.aggregate(models.Max('article'))[
-                'article__max'
-            ]
-            self.article = (
-                max_article + 1 if max_article is not None else DEFAULT_ARTICLE
-            )
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     if not self.article:
+    #         max_article = Product.objects.aggregate(models.Max('article'))[
+    #             'article__max'
+    #         ]
+    #         self.article = (
+    #             max_article + 1 if max_article is not None else DEFAULT_ARTICLE
+    #         )
+    #     super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name[:LONG_STR_CUT_VALUE]
+
+
+class Article(models.Model):
+
+    product = models.ForeignKey(
+        Product,
+        verbose_name='Продукт',
+        related_name='article_by_product',
+        blank=False,
+        null=False,
+        unique=True,
+        on_delete=models.CASCADE,
+    )
+    article = models.CharField(
+        max_length=8,
+        verbose_name='Артикул',
+        blank=False,
+        null=False,
+        unique=True,
+    )
+
+    class Meta:
+        verbose_name = 'Артикул'
+        verbose_name_plural = 'Артикулы'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('product', 'article'), name='unique_product_article'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.product} - {self.article}'
 
 
 class ProductProperty(models.Model):
@@ -309,7 +351,7 @@ class RatingFavoriteShoppingCart(models.Model):
 class Rating(RatingFavoriteShoppingCart):
 
     score = models.PositiveSmallIntegerField(
-        verbose_name='Счет', blank=False, null=False
+        verbose_name='Оценка', blank=False, null=False
     )
 
     class Meta(RatingFavoriteShoppingCart.Meta):
