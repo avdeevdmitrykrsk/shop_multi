@@ -4,12 +4,17 @@ from collections import OrderedDict
 # Thirdparty imports
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
-from django.db.models import Avg, F
+from django.db.models import Avg, F, Prefetch
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 # Projects imports
-from .constants import DEFAULT_RATING, MIN_PRICE_VALUE, PRICE_ERR_MSG
+from .constants import (
+    DEFAULT_ARTICLE,
+    DEFAULT_RATING,
+    MIN_PRICE_VALUE,
+    PRICE_ERR_MSG,
+)
 from products.models import (
     Category,
     Favorite,
@@ -105,22 +110,22 @@ class PropertyValueSerializer(serializers.ModelSerializer):
 class GetProductPropertySerializer(serializers.ModelSerializer):
 
     id = serializers.IntegerField(source='property_id')
-    name = serializers.SerializerMethodField(method_name='get_name')
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductProperty
         fields = ('id', 'name', 'value')
 
-    def get_name(self, obj):
-        return obj.property.name
+    def get_name(self, instance):
+        return instance.property.name
 
 
 class GetProductSerializer(serializers.ModelSerializer):
-    category = CategorySerializer()
+    category = CategorySerializer(read_only=True)
     sub_categories = serializers.SerializerMethodField()
     properties = serializers.SerializerMethodField()
     creator = ShopUserRetrieveSerializer(read_only=True)
-    rating = serializers.SerializerMethodField(method_name='get_rating')
+    rating = serializers.IntegerField()
     is_favorited = serializers.BooleanField(default=False, read_only=True)
     is_in_shopping_cart = serializers.BooleanField(
         default=False, read_only=True
@@ -143,15 +148,8 @@ class GetProductSerializer(serializers.ModelSerializer):
             'is_in_shopping_cart',
         )
 
-    def get_rating(self, instance):
-        rating = Rating.objects.filter(product_id=instance.id).aggregate(
-            rating=Avg('score')
-        )['rating']
-
-        if not rating:
-            rating = DEFAULT_RATING
-
-        return rating
+    def get_article(self, instance):
+        return instance.article_by_product.article
 
     def get_sub_categories(self, instance):
         sub_categories = instance.sub_categories.all()
@@ -168,6 +166,7 @@ class GetProductSerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
 
+    article = serializers.SerializerMethodField()
     properties = PropertyValueSerializer(many=True)
     sub_categories = serializers.PrimaryKeyRelatedField(
         queryset=SubCategory.objects.all(), many=True
@@ -184,6 +183,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'properties',
         )
         read_only_fields = (
+            'article',
             'creator',
             'created_at',
             'updated_at',
@@ -198,6 +198,12 @@ class ProductSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         serializer = GetProductSerializer(instance)
         return serializer.data
+
+    def _make_article():
+        pass
+
+    def article_create(self, instance):
+        pass
 
     def product_sub_categories_create(self, sub_categories, product):
         for sub_category in sub_categories:
@@ -215,8 +221,9 @@ class ProductSerializer(serializers.ModelSerializer):
         sub_categories_data = validated_data.pop('sub_categories')
         instance = Product.objects.create(**validated_data)
 
+        self.article_create(instance)
         self.product_properties_create(properties_data, instance)
-        self.sub_categories_create(sub_categories_data, instance)
+        self.product_sub_categories_create(sub_categories_data, instance)
         return instance
 
     @transaction.atomic
