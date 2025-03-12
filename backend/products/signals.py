@@ -8,7 +8,6 @@ from products.models import (
     Category,
     Product,
     ProductProperty,
-    ProductSubCategory,
     Property,
     SubCategory,
 )
@@ -24,20 +23,26 @@ def create_product(sender, **kwargs):
                 name='Телефоны',
                 slug='smartphones',
             )
+            sub_category = SubCategory.objects.create(
+                name='Водонепроницаемые',
+                slug='waterdefence',
+            )
             user = User.objects.get(id=1)
 
             product = Product.objects.create(
                 name='unittest_product',
                 description="test_description",
                 category=category,
-                price=1,
+                sub_category=sub_category,
+                price=1000,
                 creator=user,
             )
 
             product_properties = []
             property_data = (
-                {'value': 3000, 'name': 'prop1'},
-                {'value': 50000, 'name': 'prop2'},
+                {'value': 30000, 'name': 'Ёмкость АКБ'},
+                {'value': 8, 'name': 'Ширина'},
+                {'value': 19, 'name': 'Длина'},
             )
 
             for data in property_data:
@@ -50,27 +55,3 @@ def create_product(sender, **kwargs):
                     )
                 )
             ProductProperty.objects.bulk_create(product_properties)
-
-            product_sub_categories = []
-            sub_categories_data = (
-                {
-                    'name': 'ЖК',
-                    'slug': 'televisors',
-                },
-                {
-                    'name': 'Смартфоны',
-                    'slug': 'Smartphones',
-                },
-            )
-
-            for data in sub_categories_data:
-                sub_category = SubCategory.objects.create(
-                    name=data['name'],
-                    slug=data['slug'],
-                )
-                product_sub_categories.append(
-                    ProductSubCategory(
-                        product=product, sub_category=sub_category
-                    )
-                )
-            ProductSubCategory.objects.bulk_create(product_sub_categories)
