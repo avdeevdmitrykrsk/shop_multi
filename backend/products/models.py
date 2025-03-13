@@ -9,10 +9,9 @@ from django.db import models
 from django.db.models.functions import Coalesce
 
 # Projects imports
-from .constants import (
+from products.constants import (
     CATEGORY_NAME_MAX_LENGTH,
     CATEGORY_SLUG_MAX_LENGTH,
-    DEFAULT_ARTICLE,
     DEFAULT_RATING,
     LONG_STR_CUT_VALUE,
     MAX_DESCRIPTION_LENGTH,
@@ -106,7 +105,10 @@ class ProductManager(models.Manager):
             super()
             .get_queryset()
             .select_related(
-                'creator', 'category', 'sub_category', 'article_by_product'
+                'creator',
+                'category',
+                'sub_category',
+                'article_by_product',
             )
             .prefetch_related(
                 models.Prefetch(
@@ -225,13 +227,12 @@ class Product(models.Model):
 
 class Article(models.Model):
 
-    product = models.ForeignKey(
+    product = models.OneToOneField(
         Product,
         verbose_name='Продукт',
         related_name='article_by_product',
         blank=False,
         null=False,
-        unique=True,
         on_delete=models.CASCADE,
     )
     article = models.CharField(
