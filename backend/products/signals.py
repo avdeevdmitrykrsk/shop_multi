@@ -4,7 +4,9 @@ from django.db.models.signals import post_migrate
 from django.dispatch import receiver
 
 # Projects imports
+from products.constants import DEFAULT_ARTICLE_DIGIT
 from products.models import (
+    Article,
     Category,
     Product,
     ProductProperty,
@@ -36,6 +38,10 @@ def create_product(sender, **kwargs):
                 sub_category=sub_category,
                 price=1000,
                 creator=user,
+            )
+
+            Article.objects.create(
+                product=product, article=DEFAULT_ARTICLE_DIGIT
             )
 
             product_properties = []

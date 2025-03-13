@@ -9,8 +9,8 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 # Projects imports
-from .constants import (
-    DEFAULT_ARTICLE,
+from products.constants import (
+    DEFAULT_ARTICLE_DIGIT,
     DEFAULT_RATING,
     MIN_PRICE_VALUE,
     PRICE_ERR_MSG,
@@ -116,7 +116,7 @@ class GetProductPropertySerializer(serializers.ModelSerializer):
 class GetProductSerializer(serializers.ModelSerializer):
     article = serializers.SerializerMethodField()
     category = CategorySerializer(read_only=True)
-    sub_category =SubCategorySerializer(read_only=True)
+    sub_category = SubCategorySerializer(read_only=True)
     properties = serializers.SerializerMethodField()
     creator = ShopUserRetrieveSerializer(read_only=True)
     rating = serializers.IntegerField(default=DEFAULT_RATING)
@@ -143,7 +143,8 @@ class GetProductSerializer(serializers.ModelSerializer):
         )
 
     def get_article(self, instance):
-        return instance.article_by_product.first().article
+        print(instance.article_by_product)
+        return instance.article_by_product.article
 
     def get_properties(self, instance):
         product_properties = instance.product_property_prod.all()
@@ -184,19 +185,30 @@ class ProductSerializer(serializers.ModelSerializer):
         serializer = GetProductSerializer(instance)
         return serializer.data
 
-    def _get_prefix(instance):
-        return f'{instance.category[:3]}'
+    def _get_prefix(self, instance):
+        return (
+            f'{instance.category.name[:3].upper()}-'
+            f'{instance.sub_category.name[:3].upper()}'
+        )
 
-    def article_create(self, instance):
-        max_article = (
+    def _get_unique_digit(self):
+        max_digit = (
             Article.objects.all()
             .values('article')
             .aggregate(Max('article'))['article__max']
         )
 
-        article = DEFAULT_ARTICLE
-        if max_article is not None:
-            article = max_article + '1'
+        if max_digit is not None:
+            max_digit = int(max_digit.split(':')[-1])
+            max_digit += 1
+            return str(max_digit)
+
+        return DEFAULT_ARTICLE_DIGIT
+
+    def article_create(self, instance):
+        prefix = self._get_prefix(instance)
+        unique_digit = self._get_unique_digit()
+        article = f'{prefix}:{unique_digit}'
 
         Article.objects.create(product=instance, article=article)
 
