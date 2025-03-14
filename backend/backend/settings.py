@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # local apps
     'users.apps.UsersConfig',
     'products.apps.ProductsConfig',
+    'make_pc.apps.MakePcConfig',
 ]
 
 SWAGGER_SETTINGS = {
