@@ -18,6 +18,7 @@ from products.constants import (
     MAX_NAME_LENGTH,
     MAX_PRICE_VALUE,
     MAX_VALUE_LENGTH,
+    MIN_DESCRIPTION_LENGTH,
     MIN_NAME_LENGTH,
     MIN_PRICE_VALUE,
 )
@@ -184,6 +185,9 @@ class Product(models.Model):
             'Максимально допустимое число знаков - ',
             f'{MAX_DESCRIPTION_LENGTH}.',
         ),
+        validators=[
+            MinLengthValidator(MIN_DESCRIPTION_LENGTH),
+        ],
     )
     price = models.PositiveIntegerField(
         verbose_name='Цена',
@@ -204,14 +208,18 @@ class Product(models.Model):
     creator = models.ForeignKey(
         User,
         verbose_name='Создатель',
+        related_name='product_by_creator',
         on_delete=models.CASCADE,
         null=False,
     )
     created_at = models.DateTimeField(
-        verbose_name='Дата создания', blank=False, auto_now_add=True
+        verbose_name='Дата создания',
+        blank=False,
+        null=False,
+        auto_now_add=True,
     )
     updated_at = models.DateTimeField(
-        verbose_name='Дата обновления', blank=True, auto_now=True
+        verbose_name='Дата обновления', blank=True, null=False, auto_now=True
     )
 
     objects = ProductManager()
@@ -286,37 +294,6 @@ class ProductProperty(models.Model):
         return f'{self.product.name}: {self.property.name} - {self.value}'
 
 
-# class ProductSubCategory(models.Model):
-
-#     product = models.ForeignKey(
-#         Product,
-#         on_delete=models.CASCADE,
-#         related_name='product_sub_category_prod',
-#         null=False,
-#         blank=False,
-#     )
-#     sub_category = models.ForeignKey(
-#         SubCategory,
-#         on_delete=models.CASCADE,
-#         related_name='product_sub_category_cat',
-#         null=False,
-#         blank=False,
-#     )
-
-#     class Meta:
-#         verbose_name = 'Подкатегория продукта'
-#         verbose_name_plural = 'Подкатегории продуктов'
-#         constraints = [
-#             models.UniqueConstraint(
-#                 fields=('product', 'sub_category'),
-#                 name='unique_product_sub_category',
-#             )
-#         ]
-
-#     def __str__(self):
-#         return f'{self.product.name}: {self.sub_category.name}'
-
-
 class RatingFavoriteShoppingCart(models.Model):
     """Абстрактная модель для Rating/Favorite/ShoppingCart"""
 
@@ -336,7 +313,7 @@ class RatingFavoriteShoppingCart(models.Model):
         ordering = ('user', 'product')
 
     def __str__(self):
-        return f'{self.user} has a {self.recipe[:LONG_STR_CUT_VALUE]}.'
+        return f'{self.user} has a {self.product[:LONG_STR_CUT_VALUE]}.'
 
 
 class Rating(RatingFavoriteShoppingCart):

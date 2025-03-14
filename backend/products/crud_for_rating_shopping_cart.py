@@ -12,13 +12,13 @@ from products.serializers import GetProductSerializer, RatingSerializer
 
 
 def create_rating_favorite_shopping_cart(
-    request, serializer_class, pk, extra_data=None
+    request, serializer_class, pk, extra_fields=None
 ):
     instance = get_object_or_404(Product, id=pk)
 
     data = {'user': request.user.id, 'product': instance.id}
-    if extra_data:
-        data.update(extra_data)
+    if extra_fields:
+        data.update(extra_fields)
 
     serializer = serializer_class(data=data)
     serializer.is_valid(raise_exception=True)

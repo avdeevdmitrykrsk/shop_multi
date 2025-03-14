@@ -9,11 +9,14 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 # Projects imports
+from products.article import article_util
 from products.constants import (
-    DEFAULT_ARTICLE_DIGIT,
     DEFAULT_RATING,
+    MAX_NAME_LENGTH,
+    MIN_NAME_LENGTH,
     MIN_PRICE_VALUE,
     PRICE_ERR_MSG,
+    PRODUCT_NAME_ERR_MSG,
 )
 from products.models import (
     Article,
@@ -143,7 +146,6 @@ class GetProductSerializer(serializers.ModelSerializer):
         )
 
     def get_article(self, instance):
-        print(instance.article_by_product)
         return instance.article_by_product.article
 
     def get_properties(self, instance):
@@ -173,63 +175,32 @@ class ProductSerializer(serializers.ModelSerializer):
             'creator',
             'created_at',
             'updated_at',
-            'article',
         )
-
-    def validate_price(self, value):
-        if value < MIN_PRICE_VALUE:
-            raise serializers.ValidationError(PRICE_ERR_MSG)
-        return value
 
     def to_representation(self, instance):
         serializer = GetProductSerializer(instance)
         return serializer.data
 
-    def _get_prefix(self, instance):
-        return (
-            f'{instance.category.name[:3].upper()}-'
-            f'{instance.sub_category.name[:3].upper()}'
-        )
-
-    def _get_unique_digit(self):
-        max_digit = (
-            Article.objects.all()
-            .values('article')
-            .aggregate(Max('article'))['article__max']
-        )
-
-        if max_digit is not None:
-            max_digit = int(max_digit.split(':')[-1])
-            max_digit += 1
-            return str(max_digit)
-
-        return DEFAULT_ARTICLE_DIGIT
-
-    def article_create(self, instance):
-        prefix = self._get_prefix(instance)
-        unique_digit = self._get_unique_digit()
-        article = f'{prefix}:{unique_digit}'
-
-        Article.objects.create(product=instance, article=article)
-
     def product_properties_create(self, properties, product):
+        data = []
         for property in properties:
-            ProductProperty.objects.create(product=product, **property)
+            data.append(ProductProperty(product=product, **property))
+        ProductProperty.objects.bulk_create(data)
 
     @transaction.atomic
     def create(self, validated_data):
         properties_data = validated_data.pop('properties')
-        instance = Product.objects.create(**validated_data)
 
-        self.article_create(instance)
+        instance = Product.objects.create(**validated_data)
+        article_util.create(instance)
         self.product_properties_create(properties_data, instance)
+
         return instance
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        properties = validated_data.pop('properties')
-
-        if properties is not None:
+        if validated_data.get('properties'):
+            properties = validated_data.pop('properties')
             instance.product_property.clear()
             self.product_properties_create(properties, instance)
 
