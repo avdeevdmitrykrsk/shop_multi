@@ -30,7 +30,7 @@ class ShopUserViewSet(ModelViewSet):
 
 
 @api_view(['get', 'patch', 'delete'])
-@permission_classes([IsAuthenticated])
+@permission_classes((IsAuthenticated,))
 def me(request, *args, **kwargs):
     serializer = ShopUserRetrieveSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)
