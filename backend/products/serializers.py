@@ -24,6 +24,7 @@ from products.models import (
     Favorite,
     Product,
     ProductProperty,
+    ProductType,
     Property,
     Rating,
     ShoppingCart,
@@ -116,10 +117,18 @@ class GetProductPropertySerializer(serializers.ModelSerializer):
         return instance.property.name
 
 
+class ProductTypeSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProductType
+        fields = ('id', 'name')
+
+
 class GetProductSerializer(serializers.ModelSerializer):
     article = serializers.SerializerMethodField()
     category = CategorySerializer(read_only=True)
     sub_category = SubCategorySerializer(read_only=True)
+    product_type = ProductTypeSerializer(read_only=True)
     properties = serializers.SerializerMethodField()
     creator = ShopUserRetrieveSerializer(read_only=True)
     rating = serializers.IntegerField(default=DEFAULT_RATING)
@@ -136,6 +145,7 @@ class GetProductSerializer(serializers.ModelSerializer):
             'description',
             'category',
             'sub_category',
+            'product_type',
             'properties',
             'price',
             'rating',
@@ -169,6 +179,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'category',
             'sub_category',
             'properties',
+            'product_type',
         )
         read_only_fields = (
             'article',
@@ -178,8 +189,7 @@ class ProductSerializer(serializers.ModelSerializer):
         )
 
     def to_representation(self, instance):
-        serializer = GetProductSerializer(instance)
-        return serializer.data
+        return GetProductSerializer(instance).data
 
     def product_properties_create(self, properties, product):
         data = []
@@ -189,6 +199,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
+        print(validated_data)
         properties_data = validated_data.pop('properties')
 
         instance = Product.objects.create(**validated_data)

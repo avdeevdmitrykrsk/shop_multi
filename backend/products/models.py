@@ -110,6 +110,7 @@ class ProductManager(models.Manager):
                 'category',
                 'sub_category',
                 'article_by_product',
+                'product_type',
             )
             .prefetch_related(
                 models.Prefetch(
@@ -143,6 +144,17 @@ class ProductManager(models.Manager):
         return queryset
 
 
+class ProductType(models.Model):
+
+    name = models.CharField(
+        max_length=256,
+        verbose_name='Название типа продукта',
+        unique=True,
+        blank=False,
+        null=False,
+    )
+
+
 class Product(models.Model):
     """Модель Продукта"""
 
@@ -158,6 +170,14 @@ class Product(models.Model):
         on_delete=models.CASCADE,
         related_name='products_by_sub_category',
         verbose_name='Подкатегория',
+        blank=False,
+        null=False,
+    )
+    product_type = models.ForeignKey(
+        ProductType,
+        on_delete=models.CASCADE,
+        related_name='products_by_product_type',
+        verbose_name='Тип продукта',
         blank=False,
         null=False,
     )
