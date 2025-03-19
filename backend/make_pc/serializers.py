@@ -19,13 +19,16 @@ class BasePcDIYSerializer(serializers.ModelSerializer):
         'cpu': 'CPU',
         'gpu': 'GPU',
     }
-    err_mes = 'ожидается объект с product_type == {}, вы пытаетесь добавить {}'
+    type_err_mes = (
+        'ожидается объект с product_type == {}, вы пытаетесь добавить {}'
+    )
 
     class Meta:
         model = PcDIY
         fields = '__all__'
 
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         for field_name in self.RELATED_FIELDS_MAPPING:
             self.fields[field_name] = self.get_fields_serializer(field_name)
 
@@ -53,10 +56,11 @@ class PcDIYSerializer(BasePcDIYSerializer):
             if (
                 product_type := obj.product_type.name
             ) != self.RELATED_FIELDS_MAPPING[field]:
+
                 raise serializers.ValidationError(
                     {
                         field: (
-                            self.err_mes.format(
+                            self.type_err_mes.format(
                                 self.RELATED_FIELDS_MAPPING[field],
                                 product_type,
                             )
