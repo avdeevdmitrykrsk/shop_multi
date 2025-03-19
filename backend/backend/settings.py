@@ -56,18 +56,17 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'products.apps.ProductsConfig',
     'make_pc.apps.MakePcConfig',
+    # cache
+    'cachalot',
 ]
+
+CACHALOT_ENABLED = True
+CACHALOT_TIMEOUT = 60 * 15
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
         'Bearer': {'type': 'apiKey', 'name': 'Authorization', 'in': 'header'}
     }
-}
-
-DJOSER = {
-    # 'SERIALIZERS': {
-    #     'user_create': 'users.serializers.ShopUserCreateSerializer',
-    # },
 }
 
 SIMPLE_JWT = {
