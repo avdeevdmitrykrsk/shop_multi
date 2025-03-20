@@ -48,7 +48,8 @@ class PcDIYSerializer(BasePcDIYSerializer):
 
     def get_fields_serializer(self, field_name):
         return serializers.PrimaryKeyRelatedField(
-            queryset=Product.objects.all()
+            queryset=Product.objects.all(),
+            required=False,
         )
 
     def validate(self, attrs):
