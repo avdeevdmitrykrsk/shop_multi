@@ -12,6 +12,7 @@ from django.db.models.functions import Coalesce
 from products.constants import (
     CATEGORY_NAME_MAX_LENGTH,
     CATEGORY_SLUG_MAX_LENGTH,
+    DEFAULT_ORDER_TOTAL_PRICE,
     DEFAULT_RATING,
     LONG_STR_CUT_VALUE,
     MAX_DESCRIPTION_LENGTH,
@@ -378,3 +379,50 @@ class ShoppingCart(RatingFavoriteShoppingCart):
                 name='unique_shopping_cart_user_product',
             )
         ]
+
+
+class Order(models.Model):
+
+    customer = models.ForeignKey(
+        User,
+        verbose_name='Покупатель',
+        related_name='order_by_customer',
+        on_delete=models.CASCADE,
+        null=False,
+        db_index=True,
+    )
+    product = models.ForeignKey(
+        Product,
+        verbose_name='Продукт',
+        related_name='order_by_product',
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+        db_index=True,
+    )
+    total_price = models.PositiveIntegerField(
+        default=DEFAULT_ORDER_TOTAL_PRICE
+    )
+    created_at = models.DateTimeField(
+        verbose_name='Дата создания',
+        blank=False,
+        null=False,
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        verbose_name='Дата обновления',
+        blank=True,
+        null=False,
+        auto_now=True,
+    )
+
+    class Meta:
+        verbose_name = 'Заказ'
+        verbose_name_plural = 'Заказы'
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return (
+            f'Заказ {self.id} - {self.customer.username} - '
+            f'{self.product.name[:LONG_STR_CUT_VALUE]} - {self.total_price}'
+        )
