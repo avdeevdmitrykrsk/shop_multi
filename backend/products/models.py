@@ -391,14 +391,11 @@ class Order(models.Model):
         null=False,
         db_index=True,
     )
-    product = models.ForeignKey(
-        Product,
-        verbose_name='Продукт',
-        related_name='order_by_product',
-        on_delete=models.CASCADE,
-        blank=False,
-        null=False,
-        db_index=True,
+    products = models.ManyToManyField(
+        to=Product,
+        through='OrderProduct',
+        verbose_name='Продукты',
+        related_name='order_by_product'
     )
     total_price = models.PositiveIntegerField(
         default=DEFAULT_ORDER_TOTAL_PRICE
@@ -426,3 +423,24 @@ class Order(models.Model):
             f'Заказ {self.id} - {self.customer.username} - '
             f'{self.product.name[:LONG_STR_CUT_VALUE]} - {self.total_price}'
         )
+
+
+class OrderProduct(models.Model):
+    product = models.ForeignKey(
+        Product,
+        verbose_name='Продукт',
+        related_name='order_product_by_product',
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+        db_index=True,
+    )
+    order = models.ForeignKey(
+        Order,
+        verbose_name='Заказ',
+        related_name='order_product_by_order',
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+        db_index=True,
+    )

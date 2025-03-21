@@ -199,7 +199,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        print(validated_data)
         properties_data = validated_data.pop('properties')
 
         instance = Product.objects.create(**validated_data)
