@@ -331,7 +331,7 @@ class RatingFavoriteShoppingCart(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('user', 'product')
+        ordering = ('id', 'user', 'product')
 
     def __str__(self):
         return f'{self.user} has a {self.product[:LONG_STR_CUT_VALUE]}.'

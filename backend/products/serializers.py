@@ -46,14 +46,15 @@ class BaseRatingFavoriteShoppingCartSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        fields = ('user', 'product')
+        fields = ('id', 'user', 'product')
+        read_only_fields = ('user',)
 
 
 class RatingSerializer(BaseRatingFavoriteShoppingCartSerializer):
 
     class Meta(BaseRatingFavoriteShoppingCartSerializer.Meta):
         model = Rating
-        fields = ('user', 'product', 'score')
+        fields = ('id', 'user', 'product', 'score')
         validators = [
             UniqueTogetherValidator(
                 queryset=Rating.objects.all(), fields=('user', 'product')
@@ -76,11 +77,6 @@ class ShoppingCartSerializer(BaseRatingFavoriteShoppingCartSerializer):
 
     class Meta(BaseRatingFavoriteShoppingCartSerializer.Meta):
         model = ShoppingCart
-        validators = [
-            UniqueTogetherValidator(
-                queryset=ShoppingCart.objects.all(), fields=('user', 'product')
-            )
-        ]
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -250,10 +246,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def _calculate_total_price(self, products):
         return sum(
-            [
-                Product.objects.get(id=product.id).price
-                for product in products
-            ]
+            [Product.objects.get(id=product.id).price for product in products]
         )
 
     def create(self, validated_data):

@@ -12,6 +12,11 @@ from .views import (
 )
 
 router = DefaultRouter()
+router.register(
+    r'shopping_cart',
+    RatingFavoriteShoppingCartViewSet,
+    basename='shopping_cart_v1',
+)
 router.register(r'orders', OrderViewSet, basename='orders_v1')
 router.register(r'products', ProductViewSet, basename='products_v1')
 router.register(r'category', CategoryViewSet, basename='category_v1')
@@ -26,7 +31,7 @@ urlpatterns = [
         RatingFavoriteShoppingCartViewSet.as_view(
             {'post': 'create', 'get': 'retrieve'}
         ),
-        name='rating',
+        name='rating_favorite_shopping_cart',
     ),
     path(
         'products/<int:pk>/favorite/',
