@@ -22,6 +22,7 @@ from .crud_for_rating_shopping_cart import (
 from products.models import (
     Category,
     Favorite,
+    Order,
     Product,
     Rating,
     ShoppingCart,
@@ -30,7 +31,9 @@ from products.models import (
 from products.serializers import (
     CategorySerializer,
     FavoriteSerializer,
+    GetOrderSerializer,
     GetProductSerializer,
+    OrderSerializer,
     ProductSerializer,
     RatingSerializer,
     ShoppingCartSerializer,
@@ -115,3 +118,18 @@ class ProductViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(creator=self.request.user)
+
+
+@permission_classes((IsAuthenticated,))
+class OrderViewSet(ModelViewSet):
+    queryset = Order.objects.all()
+
+    def get_serializer_class(self):
+        return (
+            GetOrderSerializer
+            if self.action in SAFE_ACTIONS
+            else OrderSerializer
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(customer=self.request.user)

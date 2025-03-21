@@ -32,9 +32,7 @@ product_type_names = (
 
 @receiver(post_migrate)
 def create_category_sub_category(sender, **kwargs):
-
     if sender.name == 'products':
-
         Category.objects.create(
             name='Персональный компьютер',
             slug='personal computer',

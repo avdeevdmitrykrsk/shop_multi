@@ -5,12 +5,14 @@ from rest_framework.routers import DefaultRouter
 # Projects imports
 from .views import (
     CategoryViewSet,
+    OrderViewSet,
     ProductViewSet,
     RatingFavoriteShoppingCartViewSet,
     SubCategoryViewSet,
 )
 
 router = DefaultRouter()
+router.register(r'orders', OrderViewSet, basename='orders_v1')
 router.register(r'products', ProductViewSet, basename='products_v1')
 router.register(r'category', CategoryViewSet, basename='category_v1')
 router.register(
