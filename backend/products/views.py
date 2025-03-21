@@ -58,7 +58,6 @@ class CategoryViewSet(ModelViewSet):
     serializer_class = CategorySerializer
 
 
-@permission_classes((IsAuthenticatedOrReadOnly,))
 class RatingFavoriteShoppingCartViewSet(ModelViewSet):
 
     SERIALIZER_MAPPING = {
@@ -82,6 +81,11 @@ class RatingFavoriteShoppingCartViewSet(ModelViewSet):
     def get_queryset(self):
         path_segment = self.get_path_segment()
         return self.QUERYSET_MAPPING.get(path_segment)
+
+    def get_permissions(self):
+        if self.get_path_segment() == 'rating':
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
