@@ -22,6 +22,8 @@ from products.models import (
     Article,
     Category,
     Favorite,
+    Order,
+    OrderProduct,
     Product,
     ProductProperty,
     ProductType,
@@ -215,3 +217,51 @@ class ProductSerializer(serializers.ModelSerializer):
             self.product_properties_create(properties, instance)
 
         return super().update(instance, validated_data)
+
+
+class GetOrderSerializer(serializers.ModelSerializer):
+
+    products = GetProductSerializer(many=True)
+
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+
+class OrderSerializer(serializers.ModelSerializer):
+
+    products = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(), many=True
+    )
+
+    class Meta:
+        model = Order
+        fields = '__all__'
+        read_only_fields = ('customer',)
+
+    def to_representation(self, instance):
+        return GetOrderSerializer(instance).data
+
+    def order_products_create(self, products, order):
+        data = []
+        for product in products:
+            data.append(OrderProduct(order=order, product=product))
+        OrderProduct.objects.bulk_create(data)
+
+    def _calculate_total_price(self, products):
+        return sum(
+            [
+                Product.objects.get(id=product.id).price
+                for product in products
+            ]
+        )
+
+    def create(self, validated_data):
+        products_data = validated_data.pop('products')
+        total_price = self._calculate_total_price(products_data)
+
+        instance = Order.objects.create(
+            **validated_data, total_price=total_price
+        )
+        self.order_products_create(products_data, instance)
+        return instance
